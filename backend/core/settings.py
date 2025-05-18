@@ -28,7 +28,7 @@ SECRET_KEY = "django-insecure-+-q7edn0!)rt2akhyny6_-8(13epj8s0xd1h@kl)l#hte*@ot#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # Для production укажите конкретные домены или адреса
 
 
 # Application definition
@@ -166,7 +166,7 @@ EMAIL_HOST_PASSWORD = 'wxyzyemssjaijtfq'
 DEFAULT_FROM_EMAIL = 'zakharomashov@yandex.ru'
 
 # URL фронтенда для формирования ссылок в письмах
-FRONTEND_URL = 'http://localhost:3000'  # Измените на актуальный URL в продакшене
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')  # Для production укажите внешний URL фронтенда
 
 # Для разработки можно использовать файловый бэкенд или консольный бэкенд
 # EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
