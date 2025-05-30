@@ -368,6 +368,7 @@
   border-color: #f38ba8;
 }
 
+<<<<<<< HEAD
 /* Другие стили редактора */
 
 /* Основные стили для редактора */
@@ -459,3 +460,6 @@ h4.ce-header {
 .updating-content .ce-block {
   transition: opacity 0.1s ease;
 }
+=======
+/* Другие стили редактора */
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87

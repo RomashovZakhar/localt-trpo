@@ -9,6 +9,11 @@ import { cn } from "@/lib/utils"
 import api from "@/lib/api"
 import { useAuth } from "@/components/auth"
 import { nanoid } from "nanoid"
+<<<<<<< HEAD
+=======
+import { useToast } from '@/components/ui/use-toast'
+import { Toaster } from '@/components/ui/toaster'
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
 import Cookies from "js-cookie"
 import CursorOverlay from "./CursorOverlay"
 import EditorJS from "@editorjs/editorjs"
@@ -585,7 +590,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
             console.error('Ошибка при получении документа:', docError);
             
             // Если получили 403, пользователь не имеет доступа к документу
+<<<<<<< HEAD
             if ((docError as any).response?.status === 403) {
+=======
+            if (docError.response?.status === 403) {
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
               console.log('Нет доступа к документу, устанавливаем режим только для чтения');
               setUserRole('viewer');
               setIsReadOnly(true);
@@ -820,6 +829,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     const token = Cookies.get('access_token') || '';
     const sessionid = window.document.cookie.split('; ').find((row: string) => row.startsWith('sessionid='))?.split('=')[1] || '';
     
+<<<<<<< HEAD
     // Формируем URL для WebSocket соединения с использованием переменных окружения
     const wsBaseUrl = typeof window !== 'undefined' && (window as any).NEXT_PUBLIC_WEBSOCKET_URL
       ? (window as any).NEXT_PUBLIC_WEBSOCKET_URL
@@ -831,6 +841,15 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     
     console.log(`Установка WebSocket соединения: ${wsUrl}`);
     console.log(`Токен доступа присутствует: ${!!token}, Session ID присутствует: ${!!sessionid}, WebSocket Base URL: ${wsBaseUrl}`);
+=======
+    // Формируем URL для WebSocket соединения
+    const wsUrl = documentData.id
+      ? `ws://localhost:8001/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
+      : null;
+    
+    console.log(`Установка WebSocket соединения: ${wsUrl}`);
+    console.log(`Токен доступа присутствует: ${!!token}, Session ID присутствует: ${!!sessionid}`);
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     
     if (!wsUrl) {
       console.error('Невозможно установить WebSocket соединение: отсутствует URL');
@@ -1314,9 +1333,15 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
         else if (isValidEditorData(documentData.content)) {
           console.log("Найдены корректные данные в контенте документа");
           editorData = {
+<<<<<<< HEAD
             time: (documentData.content as any)?.time || new Date().getTime(),
             version: (documentData.content as any)?.version || "2.27.0",
             blocks: (documentData.content as any)?.blocks
+=======
+            time: documentData.content.time || new Date().getTime(),
+            version: documentData.content.version || "2.27.0",
+            blocks: documentData.content.blocks
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
           };
         } 
         // Если content - пустой объект, создаем базовую структуру
@@ -2174,7 +2199,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
           console.error('Ошибка при получении документа:', docError);
           
           // Если получили 403, пользователь потерял доступ к документу
+<<<<<<< HEAD
           if ((docError as any).response?.status === 403 && userRole !== 'viewer') {
+=======
+          if (docError.response?.status === 403 && userRole !== 'viewer') {
+>>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
             console.log('Пользователь потерял доступ, переключаем на просмотр');
             setUserRole('viewer');
             setIsReadOnly(true);
