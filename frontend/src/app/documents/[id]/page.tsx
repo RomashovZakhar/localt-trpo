@@ -198,33 +198,9 @@ export default function DocumentPage() {
         const updateResponse = await api.put(`/documents/${document.parent}/`, {
           content: updatedContent,
           title: parentDoc.title,
-          parent: parentDoc.parent
         });
         
-        if (updateResponse.status === 200) {
-          console.log('Обновлены ссылки на документ в родительском документе');
-          
-          // Принудительно обновляем родительский документ для всех открытых вкладок
-          try {
-            // Генерируем событие для принудительного обновления редактора в других вкладках
-            const refreshEvent = new CustomEvent('document_refresh', {
-              detail: { documentId: document.parent }
-            });
-            window.dispatchEvent(refreshEvent);
-            
-            // Сохраняем информацию в localStorage для межвкладочного обновления
-            localStorage.setItem('document_refresh', JSON.stringify({
-              documentId: document.parent,
-              timestamp: Date.now()
-            }));
-          } catch (e) {
-            console.error('Ошибка при отправке события обновления:', e);
-          }
-        } else {
-          console.error('Ошибка при обновлении родительского документа, статус:', updateResponse.status);
-        }
-      } else {
-        console.log('Ссылки на документ не найдены в родительском документе');
+        console.log('Родительский документ обновлен:', updateResponse.data);
       }
     } catch (err) {
       console.error('Ошибка при обновлении ссылок на документ:', err);
@@ -237,6 +213,8 @@ export default function DocumentPage() {
       // Проверяем, есть ли родитель у текущего документа
       if (!document?.parent) return;
       
+      console.log('Удаление ссылок на документ:', documentId);
+      
       // Загружаем родительский документ
       const parentResponse = await api.get(`/documents/${document.parent}/`);
       const parentDoc = parentResponse.data;
@@ -245,429 +223,349 @@ export default function DocumentPage() {
       if (!parentDoc.content || !parentDoc.content.blocks) return;
       
       let updated = false;
-      let updatedBlocks = [];
       
-      // Проходим по блокам родительского документа и исключаем ссылки на удаляемый документ
+      // Проходим по блокам родительского документа и удаляем ссылки на текущий документ
       if (Array.isArray(parentDoc.content.blocks)) {
-        updatedBlocks = parentDoc.content.blocks.filter((block: any) => {
-          // Если блок - ссылка на удаляемый документ, его нужно исключить
-          if (block.type === 'nestedDocument' && block.data && block.data.id === documentId) {
+        const updatedBlocks = parentDoc.content.blocks.filter((block: any) => {
+          if (block.type === 'nestedDocument' && 
+              block.data && 
+              typeof block.data === 'object' && 
+              'id' in block.data && 
+              block.data.id === documentId) {
             updated = true;
-            return false; // Исключаем блок из массива
+            return false;
           }
-          return true; // Оставляем все остальные блоки
-        });
-      }
-      
-      // Если нашли и удалили ссылки, сохраняем родительский документ
-      if (updated) {
-        // Обновляем блоки в родительском документе
-        parentDoc.content.blocks = updatedBlocks;
-        
-        await api.put(`/documents/${document.parent}/`, {
-          content: parentDoc.content,
-          title: parentDoc.title,
-          parent: parentDoc.parent
+          return true;
         });
         
-        console.log('Удалены ссылки на документ из родительского документа');
+        if (updated) {
+          parentDoc.content.blocks = updatedBlocks;
+          
+          const updateResponse = await api.put(`/documents/${document.parent}/`, {
+            content: parentDoc.content,
+            title: parentDoc.title,
+          });
+          
+          console.log('Ссылки на документ удалены из родительского документа:', updateResponse.data);
+        }
       }
     } catch (err) {
       console.error('Ошибка при удалении ссылок на документ:', err);
     }
   };
 
-  // Обновление документа
   const handleDocumentChange = (updatedDoc: Document) => {
-    // Обновляем документ в состоянии
+    if (!document) return;
+    
+    // Обновляем локальное состояние
     setDocument(updatedDoc);
     
-    // Если изменился заголовок документа
-    if (updatedDoc.title !== title) {
-      setTitle(updatedDoc.title);
-      
-      // Обновляем хлебные крошки
-      const updatedBreadcrumbs = breadcrumbs.map(item => 
-        item.id === updatedDoc.id 
-          ? { ...item, title: updatedDoc.title } 
-          : item
-      );
-      
-      setBreadcrumbs(updatedBreadcrumbs);
-      
-      // Обновляем ссылки на документ в родительском документе НЕМЕДЛЕННО
-      // Не ждем дебаунса для критичного обновления
-      updateDocumentReferences(updatedDoc.id, updatedDoc.title);
+    // Отменяем предыдущий таймаут сохранения, если он есть
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
     
-    // После начальной загрузки документа сохраняем все изменения на сервере
-    if (initialLoadDone.current) {
-      // Очищаем предыдущий таймаут, если он был
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
+    // Устанавливаем новый таймаут для сохранения
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.put(`/documents/${id}/`, {
+          content: updatedDoc.content,
+          title: updatedDoc.title,
+        });
+        
+        console.log('Документ сохранен:', response.data);
+      } catch (err) {
+        console.error('Ошибка при сохранении документа:', err);
+        toast.error("Не удалось сохранить документ");
       }
-      
-      // Таймаут для дебаунсинга сохранения
-      saveTimeoutRef.current = setTimeout(async () => {
-        try {
-          // Отправляем обновленные данные на сервер
-          const saveResponse = await api.put(`/documents/${updatedDoc.id}/`, {
-            title: updatedDoc.title,
-            content: updatedDoc.content,
-            parent: updatedDoc.parent,
-            icon: updatedDoc.icon
-          });
-          
-          console.log('Документ успешно сохранен на сервере:', saveResponse.status);
-          
-          // Дополнительно обновляем ссылки после сохранения, чтобы гарантировать синхронизацию
-          if (updatedDoc.title !== title && document?.parent) {
-            updateDocumentReferences(updatedDoc.id, updatedDoc.title);
-          }
-        } catch (saveErr) {
-          console.error('Ошибка при сохранении документа:', saveErr);
-        }
-      }, 1000);
-    }
+    }, 1000); // Задержка в 1 секунду перед сохранением
   };
 
   const toggleFavorite = async () => {
-    if (!document) return
-
+    if (!document) return;
+    
     try {
-      // Обновляем UI локально
-      const newFavoriteState = !document.is_favorite
-      setDocument({ ...document, is_favorite: newFavoriteState })
-
-      // Отправляем запрос на сервер
-      await api.post(`/documents/${document.id}/toggle_favorite/`, {})
-
-      // Показываем сообщение
-      toast(newFavoriteState ? "Добавлено в избранное" : "Удалено из избранного")
+      const response = await api.put(`/documents/${id}/`, {
+        is_favorite: !document.is_favorite,
+      });
       
-      // Обновляем список избранных в localStorage для синхронизации с сайдбаром
-      const favoriteUpdatedEvent = {
-        documentId: document.id,
-        title: document.title,
-        isFavorite: newFavoriteState,
-        timestamp: new Date().getTime()
-      }
-      localStorage.setItem('favorite_document_updated', JSON.stringify(favoriteUpdatedEvent))
-      
-      // Вызываем событие storage вручную для текущей вкладки
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'favorite_document_updated',
-        newValue: JSON.stringify(favoriteUpdatedEvent)
-      }))
+      setDocument(response.data);
+      toast.success(
+        response.data.is_favorite 
+          ? "Документ добавлен в избранное" 
+          : "Документ удален из избранного"
+      );
     } catch (err) {
-      // В случае ошибки восстанавливаем предыдущее состояние
-      setDocument({ ...document, is_favorite: document.is_favorite })
-      toast.error("Не удалось изменить статус избранного")
+      console.error('Ошибка при обновлении статуса избранного:', err);
+      toast.error("Не удалось обновить статус избранного");
     }
-  }
+  };
 
   const shareDocument = () => {
-    navigator.clipboard.writeText(window.location.href)
-    toast("Ссылка скопирована", {
-      description: "Теперь вы можете поделиться документом"
-    })
-  }
+    // Открываем диалог шаринга
+    const shareDialog = window.document.querySelector('#share-document-dialog') as HTMLDialogElement;
+    if (shareDialog) {
+      shareDialog.showModal();
+    }
+  };
 
   const deleteDocument = async () => {
     if (!document) return;
     
-    // Проверяем, является ли документ корневым
-    const isRootDocument = document.parent === null && document.is_root === true;
-    
-    if (isRootDocument) {
-      toast.error("Корневой документ нельзя удалить");
+    if (!confirm("Вы уверены, что хотите удалить этот документ?")) {
       return;
     }
     
-    // Запрашиваем подтверждение пользователя
-    if (!window.confirm("Вы уверены, что хотите удалить этот документ?")) return;
-
     try {
       // Сначала удаляем ссылки на документ из родительского документа
-      await removeDocumentReferences(document.id);
+      await removeDocumentReferences(id);
       
       // Затем удаляем сам документ
-      await api.delete(`/documents/${document.id}/`);
+      await api.delete(`/documents/${id}/`);
       
-      // Редирект на родительский документ или корневой документ
+      toast.success("Документ успешно удален");
+      
+      // Если есть родительский документ, перенаправляем на него
       if (document.parent) {
         window.location.href = `/documents/${document.parent}`;
       } else {
-        window.location.href = `/documents`;
+        // Иначе перенаправляем на страницу документов
+        window.location.href = '/documents';
       }
     } catch (err) {
+      console.error('Ошибка при удалении документа:', err);
       toast.error("Не удалось удалить документ");
     }
   };
 
-  // Обработчик изменения заголовка
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!document) return;
-    
     const newTitle = e.target.value;
     setTitle(newTitle);
     
-    // Обновляем документ с новым заголовком
     if (document) {
       const updatedDoc = { ...document, title: newTitle };
-      handleDocumentChange(updatedDoc);
+      setDocument(updatedDoc);
       
-      // Оповещаем другие вкладки об изменении заголовка через localStorage
-      try {
-        const event = {
-          id: document.id,
-          title: newTitle,
-          timestamp: new Date().getTime()
-        };
-        localStorage.setItem(`document_title_update_${document.id}`, JSON.stringify(event));
-        // Триггер событие storage вручную для текущей вкладки
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: `document_title_update_${document.id}`,
-          newValue: JSON.stringify(event)
-        }));
-      } catch (err) {
-        console.error('Ошибка при сохранении обновления заголовка в localStorage:', err);
+      // Отменяем предыдущий таймаут сохранения, если он есть
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
+      
+      // Устанавливаем новый таймаут для сохранения
+      saveTimeoutRef.current = setTimeout(async () => {
+        try {
+          const response = await api.put(`/documents/${id}/`, {
+            title: newTitle,
+          });
+          
+          console.log('Название документа обновлено:', response.data);
+          
+          // Обновляем ссылки на документ в родительском документе
+          await updateDocumentReferences(id, newTitle);
+        } catch (err) {
+          console.error('Ошибка при обновлении названия документа:', err);
+          toast.error("Не удалось обновить название документа");
+        }
+      }, 1000); // Задержка в 1 секунду перед сохранением
     }
   };
 
-  // Обработка обновлений иконки из других вкладок
+  // Слушаем события обновления иконки из localStorage
   useEffect(() => {
     const handleIconUpdate = (event: StorageEvent) => {
-      if (event.key === `document_icon_update_${id}` && event.newValue && document) {
-        try {
-          const data = JSON.parse(event.newValue);
-          if (data.documentId === id && data.icon) {
-            // Обновляем иконку документа в текущем состоянии
-            setDocument(prevDoc => {
-              if (!prevDoc) return prevDoc;
-              return { ...prevDoc, icon: data.icon };
-            });
-          }
-        } catch (err) {
-          console.error('Ошибка при обработке обновления иконки:', err);
-        }
+      if (event.key === `document-icon-${id}` && document) {
+        const newIcon = event.newValue;
+        setDocument(prev => prev ? { ...prev, icon: newIcon || undefined } : null);
+        
+        // Сохраняем обновленную иконку на сервере
+        api.put(`/documents/${id}/`, {
+          icon: newIcon,
+        }).catch(err => {
+          console.error('Ошибка при сохранении иконки:', err);
+        });
       }
     };
     
     window.addEventListener('storage', handleIconUpdate);
+    
     return () => {
       window.removeEventListener('storage', handleIconUpdate);
     };
   }, [id, document]);
 
-  // Функция для усечения текста с многоточием
   const truncateText = (text: string, maxLength: number = 25) => {
-    if (!text) return "Без названия";
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
-  
-  // Функция для "умного" отображения хлебных крошек
+
   const renderSmartBreadcrumbs = (items: Array<{id: string, title: string, icon?: string}>) => {
     if (items.length <= 3) {
-      // Если элементов мало, показываем все
-      return items.map((item, index) => (
-        <React.Fragment key={item.id}>
-          {index > 0 && <BreadcrumbSeparator />}
-          {renderBreadcrumbItem(item, index === items.length - 1)}
-        </React.Fragment>
-      ));
-    } else {
-      // Показываем первый элемент, эллипсис и последние 2 элемента
-      const firstItem = items[0];
-      const lastItems = items.slice(-2);
-      const hiddenItems = items.slice(1, -2);
-      
-      return (
-        <>
-          {renderBreadcrumbItem(firstItem, false)}
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <span title={`Скрытые элементы: ${hiddenItems.map(i => i.title).join(', ')}`}>
-              <BreadcrumbEllipsis />
-            </span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          {lastItems.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {index > 0 && <BreadcrumbSeparator />}
-              {renderBreadcrumbItem(item, index === lastItems.length - 1)}
-            </React.Fragment>
-          ))}
-        </>
-      );
+      return items.map((item, index) => renderBreadcrumbItem(item, index === items.length - 1));
     }
+    
+    return [
+      renderBreadcrumbItem(items[0], false),
+      <BreadcrumbSeparator key="sep1" />,
+      <BreadcrumbEllipsis key="ellipsis" />,
+      <BreadcrumbSeparator key="sep2" />,
+      renderBreadcrumbItem(items[items.length - 1], true)
+    ];
   };
-  
-  // Функция для рендеринга отдельного элемента хлебных крошек
+
   const renderBreadcrumbItem = (item: {id: string, title: string, icon?: string}, isCurrentPage: boolean) => {
-    const truncatedTitle = truncateText(item.title);
+    const content = (
+      <>
+        {item.icon && <span className="mr-1">{item.icon}</span>}
+        {truncateText(item.title)}
+      </>
+    );
     
     return isCurrentPage ? (
-      <BreadcrumbItem>
-        <BreadcrumbPage title={item.title}>
-          {item.icon && (
-            <span className="mr-1">{item.icon}</span>
-          )}
-          {truncatedTitle}
-        </BreadcrumbPage>
-      </BreadcrumbItem>
+      <BreadcrumbPage key={item.id}>{content}</BreadcrumbPage>
     ) : (
-      <BreadcrumbItem>
-        <BreadcrumbLink href={`/documents/${item.id}`} title={item.title}>
-          {item.icon && (
-            <span className="mr-1">{item.icon}</span>
-          )}
-          {truncatedTitle}
-        </BreadcrumbLink>
+      <BreadcrumbItem key={item.id}>
+        <BreadcrumbLink href={`/documents/${item.id}`}>{content}</BreadcrumbLink>
       </BreadcrumbItem>
     );
   };
 
   if (loading) {
     return (
-      <SidebarProvider>
-        <div className="flex h-screen">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col items-center justify-center min-h-screen">
-              <Loader 
-                variant="spinner"
-                size="md"
-                text="Загрузка документа..."
-              />
-            </div>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
-    )
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader size="lg" text="Загрузка документа..." />
+      </div>
+    );
   }
 
-  if (error || !document) {
+  if (error) {
     return (
-      <SidebarProvider>
-        <div className="flex h-screen">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col items-center justify-center min-h-screen">
-              <p className="text-lg text-red-500">{error || "Документ не найден"}</p>
-            </div>
-          </SidebarInset>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Ошибка</h1>
+          <p className="text-muted-foreground">{error}</p>
         </div>
-      </SidebarProvider>
-    )
+      </div>
+    );
+  }
+
+  if (!document) {
+    return null;
   }
 
   return (
     <SidebarProvider>
       <div className="flex h-screen">
         <AppSidebar />
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <Button variant="ghost" size="icon" asChild>
-              <SidebarTrigger>
-                <PanelLeft className="h-4 w-4" />
-              </SidebarTrigger>
-            </Button>
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                {renderSmartBreadcrumbs(breadcrumbs)}
-              </BreadcrumbList>
-            </Breadcrumb>
-
-            <div className="flex items-center gap-2 ml-auto">
-              <ShareDocument documentId={document.id} />
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleFavorite}
-                className={cn(
-                  document.is_favorite && "text-yellow-500"
-                )}
-              >
-                <Star 
-                  className="h-4 w-4" 
-                  fill={document.is_favorite ? "currentColor" : "none"}
-                />
-              </Button>
+        
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <header className="border-b">
+            <div className="flex h-16 items-center px-4 gap-4">
+              <SidebarTrigger />
               
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowHistorySidebar(!showHistorySidebar)}
-                className={cn(
-                  showHistorySidebar && "bg-accent"
-                )}
-              >
-                <Clock className="h-4 w-4" />
-              </Button>
-
-              <NotificationDropdown />
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={deleteDocument}>
-                    <Trash className="mr-2 h-4 w-4" />
-                    Удалить
-                  </DropdownMenuItem>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        <BarChart3 className="mr-2 h-4 w-4" />
-                        Статистика
-                      </DropdownMenuItem>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>Статистика документа</DialogTitle>
-                        <DialogDescription>
-                          Информация об использовании документа
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="py-4">
-                        <DocumentStatistics documentId={document.id} />
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Breadcrumb>
+                <BreadcrumbList>
+                  {renderSmartBreadcrumbs(breadcrumbs)}
+                </BreadcrumbList>
+              </Breadcrumb>
+              
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFavorite}
+                  className={cn(
+                    "hover:bg-yellow-100 hover:text-yellow-600",
+                    document.is_favorite && "text-yellow-500"
+                  )}
+                >
+                  <Star className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={shareDocument}
+                >
+                  <Share className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowHistorySidebar(true)}
+                >
+                  <Clock className="h-5 w-5" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const statsDialog = window.document.querySelector('#document-statistics-dialog') as HTMLDialogElement;
+                    if (statsDialog) {
+                      statsDialog.showModal();
+                    }
+                  }}
+                >
+                  <BarChart3 className="h-5 w-5" />
+                </Button>
+                
+                <NotificationDropdown />
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={deleteDocument}>
+                      <Trash className="mr-2 h-4 w-4" />
+                      Удалить
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </header>
-
-          <div className="flex-1 overflow-y-auto">
-            <div className="flex h-full">
-              <div className={cn("flex-1", showHistorySidebar && "mr-[400px]")}>
-                <DocumentEditor
-                  document={document}
-                  onChange={handleDocumentChange}
-                  titleInputRef={titleInputRef}
-                />
-              </div>
+          
+          <main className="flex-1 overflow-auto">
+            <div className="container max-w-4xl py-6">
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={title}
+                onChange={handleTitleChange}
+                className="w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 p-0 mb-4"
+                placeholder="Без названия"
+              />
               
-              {showHistorySidebar && (
-                <div className="fixed top-16 right-0 bottom-0 z-20">
-                  <DocumentHistorySidebar 
-                    documentId={document.id} 
-                    onClose={() => setShowHistorySidebar(false)} 
-                  />
-                </div>
-              )}
+              <DocumentEditor
+                document={document}
+                onChange={handleDocumentChange}
+              />
             </div>
-          </div>
-        </SidebarInset>
+          </main>
+        </div>
+        
+        <DocumentHistorySidebar
+          documentId={id}
+          onClose={() => setShowHistorySidebar(false)}
+        />
       </div>
+      
+      <ShareDocument documentId={id} />
+      
+      <Dialog>
+        <DialogContent id="document-statistics-dialog" className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Статистика документа</DialogTitle>
+            <DialogDescription>
+              Анализ содержимого и активности документа
+            </DialogDescription>
+          </DialogHeader>
+          <DocumentStatistics documentId={id} />
+        </DialogContent>
+      </Dialog>
     </SidebarProvider>
-  )
+  );
 } 

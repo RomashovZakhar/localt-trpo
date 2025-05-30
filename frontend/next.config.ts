@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-<<<<<<< HEAD
   /* Основные настройки */
   reactStrictMode: true,
   
@@ -76,9 +75,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-=======
-  /* config options here */
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
 };
 
 export default nextConfig;

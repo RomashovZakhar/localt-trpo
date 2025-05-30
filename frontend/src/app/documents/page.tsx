@@ -1,32 +1,3 @@
-<<<<<<< HEAD
-﻿'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader } from '@/components/ui/loader';
-
-export default function DocumentsPage() {
-  const router = useRouter();
-  
-  useEffect(() => {
-    // Имитация задержки для демонстрации загрузчика
-    const timer = setTimeout(() => {
-      router.push('/documents/new');
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [router]);
-  
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <Loader 
-        size="lg" 
-        text="Загрузка документов..." 
-      />
-    </div>
-  );
-} 
-=======
 "use client"
 
 import { useEffect } from "react"
@@ -198,74 +169,32 @@ export default function DocumentsIndexPage() {
       
       try {
         console.log("Создаю новый корневой документ с приветственным контентом");
-        
-        // Сначала проверим, нет ли уже корневых документов (это может означать,
-        // что предыдущие запросы не вернули их по какой-то причине)
-        const checkResponse = await api.get("/documents/?root=true");
-        if (Array.isArray(checkResponse.data) && checkResponse.data.length > 0) {
-          console.log("Обнаружены существующие корневые документы, отменяю создание нового");
-          
-          // Если есть документы, используем первый (с наименьшим ID)
-          const sortedDocs = [...checkResponse.data].sort((a, b) => {
-            const idA = parseInt(a.id);
-            const idB = parseInt(b.id);
-            return idA - idB;
-          });
-          
-          const rootDocumentId = sortedDocs[0].id;
-          console.log(`Перенаправление на существующий документ с ID ${rootDocumentId}`);
-          router.push(`/documents/${rootDocumentId}`);
-          return;
-        }
-        
-        // Структура данных для EditorJS в правильном формате
-        const documentData = {
-          title: "Моё рабочее пространство",
-          parent: null,
-          is_root: true,
+        const response = await api.post("/documents/", {
+          title: "Мой первый документ",
           content: welcomeContent,
-          icon: "🏡"
-        };
+          is_root: true
+        });
         
-        console.log("Отправляемые данные:", JSON.stringify(documentData, null, 2));
-        
-        const newRootResponse = await api.post("/documents/", documentData);
-        
-        console.log("Ответ API при создании корневого документа:", newRootResponse.data);
-        
-        // Проверяем, что ответ содержит id нового документа
-        if (newRootResponse.data && newRootResponse.data.id) {
-          router.push(`/documents/${newRootResponse.data.id}`);
-        } else {
-          console.error("Не удалось получить ID созданного документа:", newRootResponse.data);
-          // Если не удалось получить ID, показываем сообщение об ошибке
-          alert("Не удалось создать корневой документ. Пожалуйста, обновите страницу или обратитесь в службу поддержки.");
-        }
-      } catch (createErr) {
-        console.error("Ошибка при создании корневого документа:", createErr);
-        // Показываем сообщение об ошибке пользователю
-        alert("Произошла ошибка при создании корневого документа. Пожалуйста, попробуйте еще раз.");
-      } finally {
-        // Сбрасываем флаг после завершения
+        console.log("Корневой документ успешно создан:", response.data);
+        router.push(`/documents/${response.data.id}`);
+      } catch (err) {
+        console.error("Ошибка при создании корневого документа:", err);
+        // В случае ошибки сбрасываем флаг создания
         isCreatingRootDocument = false;
         // @ts-ignore
         window.isCreatingRootDocument = false;
       }
-    }
+    };
 
-    fetchRootDocument()
-  }, [router])
+    fetchRootDocument();
+  }, [router]);
 
-  // Показываем индикатор загрузки, пока идет перенаправление
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       <Loader 
-        variant="skeleton" 
         size="lg" 
         text="Загрузка документов..." 
-        fullPage 
       />
     </div>
-  )
-} 
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
+  );
+}

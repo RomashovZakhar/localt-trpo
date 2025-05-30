@@ -1,17 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import './remote-cursor.css';
 
-<<<<<<< HEAD
-interface RemoteCursor {
-  id: string;
-  username: string;
-  color: string;
-  position: {
-    x: number;
-    y: number;
-  } | null;
-  timestamp: number;
-=======
 interface CursorPosition {
   x: number;
   y: number;
@@ -23,16 +12,11 @@ interface RemoteCursor {
   position: CursorPosition | null;
   color: string;
   timestamp?: number;
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
 }
 
 interface CursorOverlayProps {
   cursors: RemoteCursor[];
-<<<<<<< HEAD
   containerRef: React.RefObject<HTMLDivElement>;
-=======
-  containerRef: React.RefObject<HTMLDivElement | null>;
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
 }
 
 /**
@@ -74,17 +58,13 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
         position: 'absolute',
         top: 0,
         left: 0,
-<<<<<<< HEAD
         right: 0,
         bottom: 0,
-=======
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
         pointerEvents: 'none',
         zIndex: 1000,
         overflow: 'visible'
       }}
     >
-<<<<<<< HEAD
       {cursors.map(cursor => {
         if (!cursor.position) return null;
         
@@ -99,7 +79,8 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
               pointerEvents: 'none',
               zIndex: 1000,
               transition: 'transform 0.1s ease-out, opacity 0.3s ease-in-out',
-            }}
+              '--cursor-color': cursor.color
+            } as React.CSSProperties}
           >
             {/* Треугольник курсора */}
             <div
@@ -115,6 +96,7 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
             
             {/* Имя пользователя */}
             <div
+              className="cursor-username"
               style={{
                 background: cursor.color,
                 color: '#fff',
@@ -124,36 +106,14 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
                 marginTop: '5px',
                 whiteSpace: 'nowrap',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
-              }}
-=======
-      {cursors.map(cursor => 
-        cursor.position && (
-          <div
-            key={cursor.id}
-            className="remote-cursor"
-            style={{
-              left: `${cursor.position.x}px`,
-              top: `${cursor.position.y}px`,
-              '--cursor-color': cursor.color
-            } as React.CSSProperties}
-          >
-            <div 
-              className="cursor-username"
-              style={{
                 '--cursor-color': cursor.color
               } as React.CSSProperties}
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
             >
               {cursor.username}
             </div>
           </div>
-<<<<<<< HEAD
         );
       })}
-=======
-        )
-      )}
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     </div>
   );
 };

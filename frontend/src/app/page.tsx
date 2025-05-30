@@ -1,32 +1,3 @@
-<<<<<<< HEAD
-﻿'use client';
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader } from '@/components/ui/loader';
-
-export default function Home() {
-  const router = useRouter();
-  
-  useEffect(() => {
-    // РРјРёС‚Р°С†РёСЏ Р·Р°РґРµСЂР¶РєРё РґР»СЏ РґРµРјРѕРЅСЃС‚СЂР°С†РёРё Р·Р°РіСЂСѓР·С‡РёРєР°
-    const timer = setTimeout(() => {
-      router.push('/documents/new');
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [router]);
-  
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <Loader 
-        size="lg" 
-        text="Р—Р°РіСЂСѓР·РєР° СЂР°Р±РѕС‡РµРіРѕ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІР°..." 
-      />
-    </div>
-  );
-} 
-=======
 "use client"
 
 import { useEffect } from "react"
@@ -199,92 +170,39 @@ export default function Home() {
       window.isCreatingRootDocument = true;
       
       try {
-        console.log("Создаю новый корневой документ с приветственным контентом");
-        
-        // Сначала проверим, нет ли уже корневых документов (это может означать,
-        // что предыдущие запросы не вернули их по какой-то причине)
-        const checkResponse = await api.get("/documents/?root=true");
-        if (Array.isArray(checkResponse.data) && checkResponse.data.length > 0) {
-          console.log("Обнаружены существующие корневые документы, отменяю создание нового");
-          
-          // Если есть документы, используем первый (с наименьшим ID)
-          const sortedDocs = [...checkResponse.data].sort((a, b) => {
-            const idA = parseInt(a.id);
-            const idB = parseInt(b.id);
-            return idA - idB;
-          });
-          
-          const rootDocumentId = sortedDocs[0].id;
-          console.log(`Перенаправление на существующий документ с ID ${rootDocumentId}`);
-          router.push(`/documents/${rootDocumentId}`);
-          return;
-        }
-        
-        // Структура данных для EditorJS в правильном формате
-        const documentData = {
-          title: "Моё рабочее пространство",
-          parent: null,
-          is_root: true,
+        // Создаем новый корневой документ с приветственным контентом
+        const response = await api.post("/documents/", {
+          title: "Мое рабочее пространство",
           content: welcomeContent,
-          icon: "🏡"
-        };
+          is_root: true
+        });
         
-        console.log("Отправляемые данные:", JSON.stringify(documentData, null, 2));
+        console.log("Создан новый корневой документ:", response.data);
         
-        const newRootResponse = await api.post("/documents/", documentData);
-        
-        console.log("Ответ API при создании корневого документа:", newRootResponse.data);
-        
-        // Проверяем, что ответ содержит id нового документа
-        if (newRootResponse.data && newRootResponse.data.id) {
-          router.push(`/documents/${newRootResponse.data.id}`);
-        } else {
-          console.error("Не удалось получить ID созданного документа:", newRootResponse.data);
-          // Если не удалось получить ID, показываем сообщение об ошибке
-          alert("Не удалось создать корневой документ. Пожалуйста, обновите страницу или обратитесь в службу поддержки.");
-        }
-      } catch (createErr) {
-        console.error("Ошибка при создании корневого документа:", createErr);
-        // Показываем сообщение об ошибке пользователю
-        alert("Произошла ошибка при создании корневого документа. Пожалуйста, попробуйте еще раз.");
+        // Перенаправляем на новый документ
+        router.push(`/documents/${response.data.id}`);
+      } catch (error) {
+        console.error("Ошибка при создании корневого документа:", error);
+        // В случае ошибки показываем сообщение пользователю
+        // TODO: Добавить уведомление об ошибке
       } finally {
-        // Сбрасываем флаг после завершения
+        // Сбрасываем флаг создания документа
         isCreatingRootDocument = false;
         // @ts-ignore
         window.isCreatingRootDocument = false;
       }
-    }
+    };
 
-    fetchRootDocument()
-  }, [router])
+    // Запускаем процесс загрузки/создания корневого документа
+    fetchRootDocument();
+  }, [router]);
 
-  // Функция для создания нового документа
-  const createDocument = async () => {
-    try {
-      const response = await api.post('/documents/', {
-        title: 'Новый документ',
-        content: { blocks: [] }
-      })
-      
-      // Перенаправляем на страницу созданного документа
-      router.push(`/documents/${response.data.id}`)
-    } catch (error) {
-      console.error('Ошибка при создании документа:', error)
-    }
-  }
-
-  // Показываем индикатор загрузки, пока идет перенаправление
   return (
-    <main className="flex min-h-screen flex-col items-start p-6 max-w-7xl mx-auto">
-      <div className="w-full flex-1 flex items-center justify-center">
-        <Loader 
-          variant="dots" 
-          size="lg" 
-          text="Загрузка документа..." 
-          fullPage 
-        />
-      </div>
-    </main>
-  )
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <Loader 
+        size="lg" 
+        text="Загрузка рабочего пространства..." 
+      />
+    </div>
+  );
 }
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87

@@ -4,11 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-<<<<<<< HEAD
     "build": "next build --no-lint",
-=======
-    "build": "next build",
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     "start": "next start",
     "lint": "next lint"
   },
@@ -19,11 +15,8 @@
     "@editorjs/header": "^2.8.8",
     "@editorjs/image": "^2.10.2",
     "@editorjs/list": "^2.0.6",
-<<<<<<< HEAD
     "@editorjs/marker": "^1.4.0",
     "@editorjs/quote": "^2.7.6",
-=======
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     "@editorjs/table": "^2.4.4",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
@@ -36,19 +29,13 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-switch": "^1.1.3",
     "@radix-ui/react-tabs": "^1.1.3",
-<<<<<<< HEAD
     "@radix-ui/react-toast": "^1.2.14",
-=======
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     "@types/js-cookie": "^3.0.6",
     "axios": "^1.8.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-<<<<<<< HEAD
     "editorjs-undo": "^2.0.28",
-=======
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
     "emoji-picker-react": "^4.12.2",
     "highlight.js": "^11.11.1",
     "input-otp": "^1.4.2",
@@ -60,7 +47,6 @@
     "react": "^19.0.0",
     "react-day-picker": "^9.6.3",
     "react-dom": "^19.0.0",
-<<<<<<< HEAD
     "react-textarea-autosize": "^8.5.9",
     "socket.io-client": "^4.8.1",
     "sonner": "^2.0.1",
@@ -68,12 +54,6 @@
     "tailwindcss-animate": "^1.0.7",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27"
-=======
-    "socket.io-client": "^4.8.1",
-    "sonner": "^2.0.1",
-    "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7"
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
