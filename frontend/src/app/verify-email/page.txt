@@ -1,0 +1,27 @@
+'use client';
+
+import { Suspense } from 'react';
+import { Loader } from '@/components/ui/loader';
+
+// Компонент содержимого страницы
+function VerifyEmailContent() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <h1 className="text-2xl font-bold mb-4">Подтверждение Email</h1>
+      <p className="mb-6">Пожалуйста, подождите...</p>
+      <Loader 
+        size="lg" 
+        text="Проверка кода подтверждения..." 
+      />
+    </div>
+  );
+}
+
+// Основной компонент страницы
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<Loader size="lg" text="Загрузка..." />}>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+} 

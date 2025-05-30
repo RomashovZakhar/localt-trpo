@@ -1,0 +1,461 @@
+/* Стили для заголовков в редакторе */
+.codex-editor h2 {
+  font-size: 1.5rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.2;
+}
+
+.codex-editor h3 {
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.3;
+}
+
+.codex-editor h4 {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  line-height: 1.4;
+}
+
+/* Улучшенные стили для блока кода */
+.ce-block--code {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+/* Стиль для самого блока кода */
+.ce-code {
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+}
+
+/* Текстовая область для ввода кода */
+.ce-code__textarea {
+  width: 100%;
+  min-height: 200px;
+  padding: 15px !important;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  resize: vertical;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  overflow: auto;
+  letter-spacing: 0 !important;
+}
+
+.dark .ce-code__textarea {
+  background-color: var(--secondary);
+  border-color: var(--border);
+}
+
+/* Блок просмотра кода */
+.ce-code__viewer,
+.ce-code pre {
+  margin: 0;
+  padding: 0;
+  border-radius: 5px;
+  overflow: auto;
+  position: relative;
+}
+
+.ce-code pre code,
+.ce-code__viewer {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  border-radius: 5px;
+  background-color: var(--muted);
+  color: var(--foreground);
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  white-space: pre;
+  overflow-x: auto;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  -o-tab-size: 2;
+  letter-spacing: 0 !important;
+}
+
+.dark .ce-code pre code,
+.dark .ce-code__viewer {
+  background-color: var(--secondary);
+}
+
+/* Улучшенные стили для выпадающего списка языков */
+.ce-code select,
+.ce-code__languageSelect {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
+  font-size: 12px;
+  padding: 4px 8px;
+  padding-right: 24px; /* для иконки стрелки */
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='feather feather-chevron-down'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 16px;
+}
+
+.dark .ce-code select,
+.dark .ce-code__languageSelect {
+  background-color: var(--secondary);
+  border-color: var(--border);
+}
+
+.ce-code select:focus,
+.ce-code__languageSelect:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
+}
+
+/* Стили для активного состояния */
+.ce-code.ce-code--focused .ce-code__textarea,
+.ce-code--focused .ce-code__textarea {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary), 0.2);
+}
+
+/* Стили для меток языков */
+.ce-code__language-label {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* Стили для подсветки синтаксиса */
+.hljs {
+  background: transparent !important;
+  color: var(--foreground) !important;
+  font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0 !important;
+}
+
+/* Цвета для светлой темы */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name,
+.hljs-tag {
+  color: #0033cc !important;
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-section,
+.hljs-attribute,
+.hljs-literal,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-addition {
+  color: #bc0031 !important;
+}
+
+.hljs-comment,
+.hljs-quote,
+.hljs-deletion {
+  color: #808080 !important;
+}
+
+.hljs-meta,
+.hljs-bullet,
+.hljs-regexp,
+.hljs-link {
+  color: #009926 !important;
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params {
+  color: #990073 !important;
+}
+
+/* Цвета для темной темы */
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-built_in,
+.dark .hljs-name,
+.dark .hljs-tag {
+  color: #66b5ff !important;
+}
+
+.dark .hljs-string,
+.dark .hljs-title,
+.dark .hljs-section,
+.dark .hljs-attribute,
+.dark .hljs-literal,
+.dark .hljs-template-tag,
+.dark .hljs-template-variable,
+.dark .hljs-type,
+.dark .hljs-addition {
+  color: #ff6666 !important;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote,
+.dark .hljs-deletion {
+  color: #999999 !important;
+}
+
+.dark .hljs-meta,
+.dark .hljs-bullet,
+.dark .hljs-regexp,
+.dark .hljs-link {
+  color: #33cc66 !important;
+}
+
+.dark .hljs-number,
+.dark .hljs-symbol,
+.dark .hljs-variable,
+.dark .hljs-template-variable,
+.dark .hljs-built_in,
+.dark .hljs-builtin-name,
+.dark .hljs-literal,
+.dark .hljs-type,
+.dark .hljs-params {
+  color: #f08bc5 !important;
+}
+
+/* Anti-flicker rules for editor updates */
+.updating-content,
+.updating-content * {
+  transition: none !important;
+  animation: none !important;
+  animation-duration: 0s !important;
+  opacity: 1 !important;
+}
+
+.updating-content .ce-block {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.updating-content .ce-toolbar,
+.updating-content .ce-toolbar__content,
+.updating-content .ce-block__content,
+.updating-content .ce-inline-toolbar,
+.updating-content .codex-editor__redactor {
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+/* Ensure stable rendering of existing content */
+.ce-block {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+.ce-block:hover {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Стили для режима "только для чтения" */
+.editor-readonly {
+  position: relative;
+  opacity: 0.95;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.1);
+  user-select: text !important;
+}
+
+/* Явно отключаем редактирование для всех элементов внутри редактора */
+.editor-readonly .ce-block,
+.editor-readonly .ce-toolbar,
+.editor-readonly .ce-toolbar__plus,
+.editor-readonly .ce-toolbar__settings-btn,
+.editor-readonly .ce-paragraph,
+.editor-readonly [contenteditable="true"] {
+  pointer-events: none !important;
+  cursor: default !important;
+  user-select: text !important;
+}
+
+/* Полностью скрываем элементы управления */
+.editor-readonly .ce-toolbar,
+.editor-readonly .ce-toolbar__plus,
+.editor-readonly .ce-toolbar__settings-btn,
+.editor-readonly .ce-inline-toolbar,
+.editor-readonly .ce-conversion-toolbar,
+.editor-readonly .ce-conversion-toolbar--showed,
+.editor-readonly .codex-editor--narrow .ce-toolbar__plus,
+.editor-readonly .ce-popover--opened,
+.editor-readonly .ce-toolbox,
+.editor-readonly .ce-settings,
+.editor-readonly .tc-add-row,
+.editor-readonly .tc-add-column,
+.editor-readonly .tc-settings {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.editor-readonly::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(200, 200, 200, 0.05);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.readonly-notice {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background-color: #f8f9fa;
+  color: #585858;
+  padding: 8px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 4px solid #fb7185;
+  display: block;
+  font-weight: 500;
+}
+
+.dark .readonly-notice {
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  border-color: #f38ba8;
+}
+
+/* Другие стили редактора */
+
+/* Основные стили для редактора */
+.ce-block__content {
+  max-width: 100%;
+  margin: 0;
+  padding: 0 12px;
+}
+
+.ce-toolbar__content {
+  max-width: 100%;
+  margin: 0;
+}
+
+.ce-header {
+  padding: 0.4em 0;
+}
+
+h2.ce-header {
+  font-size: 1.5rem;
+}
+
+h3.ce-header {
+  font-size: 1.25rem;
+}
+
+h4.ce-header {
+  font-size: 1.1rem;
+}
+
+/* Стили для режима только для чтения */
+.editor-readonly .ce-toolbar,
+.editor-readonly .ce-block__content [contentEditable=true] {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.editor-readonly .ce-toolbar {
+  display: none !important;
+}
+
+.editor-readonly .ce-block {
+  cursor: default;
+}
+
+/* Стиль для уведомления о режиме только для чтения */
+.readonly-notice {
+  background-color: rgba(245, 245, 245, 0.9);
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  color: #666;
+  text-align: center;
+  font-size: 14px;
+  border: 1px solid #e0e0e0;
+}
+
+/* Стили для блока вложенного документа */
+.nested-document-block {
+  padding: 10px 0;
+}
+
+/* Стили для списков */
+.cdx-list {
+  padding-left: 24px;
+}
+
+/* Стили для задач */
+.cdx-checklist__item {
+  margin-bottom: 10px;
+}
+
+/* Стили для кода */
+.ce-code {
+  background-color: #f6f8fa;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: monospace;
+}
+
+/* Стили для цитат */
+.cdx-quote {
+  border-left: 3px solid #ccc;
+  padding-left: 12px;
+  margin: 12px 0;
+}
+
+/* Стили для обновления контента без мерцания */
+.updating-content .ce-block {
+  transition: opacity 0.1s ease;
+}

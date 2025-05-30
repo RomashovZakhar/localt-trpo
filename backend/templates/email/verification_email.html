@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Подтверждение вашего email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .verification-code {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            letter-spacing: 3px;
+        }
+        .button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 12px 20px;
+            background-color: #4F46E5;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Подтверждение email</h1>
+        </div>
+        
+        <p>Здравствуйте, <strong>{{ username }}</strong>!</p>
+        
+        <p>Спасибо за регистрацию в нашем приложении. Для завершения процесса регистрации, пожалуйста, подтвердите свой email, используя код подтверждения ниже:</p>
+        
+        <div class="verification-code">{{ verification_code }}</div>
+        
+        <p>Введите этот код в форму подтверждения email на сайте. Код действителен в течение 30 минут.</p>
+        
+        <a href="{{ verification_url }}" class="button">Подтвердить Email</a>
+        
+        <p>Если вы не регистрировались в нашем приложении, вы можете проигнорировать это письмо.</p>
+        
+        <div class="footer">
+            <p>С уважением, команда поддержки</p>
+            <p>&copy; {% now "Y" %} Наше приложение. Все права защищены.</p>
+        </div>
+    </div>
+</body>
+</html> 

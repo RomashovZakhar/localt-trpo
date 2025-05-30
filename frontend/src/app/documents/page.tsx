@@ -1,0 +1,27 @@
+﻿'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader } from '@/components/ui/loader';
+
+export default function DocumentsPage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Имитация задержки для демонстрации загрузчика
+    const timer = setTimeout(() => {
+      router.push('/documents/new');
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [router]);
+  
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen">
+      <Loader 
+        size="lg" 
+        text="Загрузка документов..." 
+      />
+    </div>
+  );
+} 

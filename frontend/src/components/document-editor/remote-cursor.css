@@ -1,0 +1,71 @@
+/* Стили для отображения курсоров в стиле Figma */
+.remote-cursor {
+  position: absolute;
+  width: 2px;
+  height: 24px;
+  background-color: var(--cursor-color, #0d99ff);
+  z-index: 1000;
+  pointer-events: none;
+  transition: transform 0.1s ease-out, opacity 0.3s ease-in-out;
+  will-change: transform, left, top;
+  border-radius: 1px;
+  animation: cursor-appear 0.3s ease-out;
+}
+
+.remote-cursor:before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--cursor-color, #0d99ff);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.remote-cursor .cursor-username {
+  position: absolute;
+  top: -26px;
+  left: 0;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--cursor-color, #ff0000);
+  color: white;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000 !important;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  transform: translateX(-50%);
+  opacity: 0.9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  letter-spacing: -0.2px;
+  animation: cursor-appear 0.3s ease-out;
+  margin-top: 5px;
+}
+
+/* Анимация для появления курсора */
+@keyframes cursor-appear {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Добавляем Z-index для контейнера редактора */
+.editor-container {
+  position: relative !important;
+  z-index: 1;
+}
+
+/* Добавляем стили для контейнера оверлея курсоров */
+.cursor-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+  overflow: visible;
+} 

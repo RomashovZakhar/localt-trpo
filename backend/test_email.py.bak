@@ -1,0 +1,43 @@
+"""
+Скрипт для тестирования отправки электронных писем через Яндекс.Почту
+Запуск: python test_email.py
+"""
+
+import os
+import sys
+import django
+
+# Настройка Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+django.setup()
+
+from django.core.mail import send_mail
+from django.conf import settings
+
+def test_email_sending():
+    subject = 'Тестовое письмо от приложения'
+    message = 'Это тестовое письмо для проверки настроек отправки email через Яндекс.Почту.'
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = ['zakharomashov@gmail.com']  # Замените на email для теста (не тот же, что и отправитель)
+    
+    print(f"Отправка тестового письма с {from_email} на {recipient_list}...")
+    print(f"Используемые настройки SMTP: {settings.EMAIL_HOST}:{settings.EMAIL_PORT}, SSL: {settings.EMAIL_USE_SSL}")
+    
+    try:
+        result = send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=recipient_list,
+            fail_silently=False,
+        )
+        
+        if result:
+            print("✅ Письмо успешно отправлено!")
+        else:
+            print("❌ Ошибка при отправке письма.")
+    except Exception as e:
+        print(f"❌ Исключение при отправке письма: {str(e)}")
+
+if __name__ == "__main__":
+    test_email_sending() 
