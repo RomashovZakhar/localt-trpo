@@ -109,8 +109,8 @@ services:
       - websocket
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-      - NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:8001}
+      - NEXT_PUBLIC_API_URL=https://trpo-rodnik.ru
+      - NEXT_PUBLIC_WEBSOCKET_URL=wss://trpo-rodnik.ru
     ports:
       - "3000:3000"
     restart: unless-stopped
