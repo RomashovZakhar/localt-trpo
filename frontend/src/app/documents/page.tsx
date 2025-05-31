@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import api from "@/lib/api"
 import { Loader } from "@/components/ui/loader"
@@ -70,15 +70,9 @@ const welcomeContent = {
   version: "2.27.0"
 };
 
-// Используем общий флаг для предотвращения параллельного создания корневого документа
-// из главной страницы и страницы документов
-// @ts-ignore
-let isCreatingRootDocument = window.isCreatingRootDocument || false;
-// @ts-ignore
-window.isCreatingRootDocument = isCreatingRootDocument;
-
 export default function DocumentsIndexPage() {
   const router = useRouter()
+  const [isCreatingRootDocument, setIsCreatingRootDocument] = useState(false)
 
   useEffect(() => {
     // Проверяем, авторизован ли пользователь
@@ -163,9 +157,7 @@ export default function DocumentsIndexPage() {
       }
       
       // Устанавливаем флаг, что процесс создания начался
-      isCreatingRootDocument = true;
-      // @ts-ignore
-      window.isCreatingRootDocument = true;
+      setIsCreatingRootDocument(true);
       
       try {
         console.log("Создаю новый корневой документ с приветственным контентом");
@@ -180,14 +172,12 @@ export default function DocumentsIndexPage() {
       } catch (err) {
         console.error("Ошибка при создании корневого документа:", err);
         // В случае ошибки сбрасываем флаг создания
-        isCreatingRootDocument = false;
-        // @ts-ignore
-        window.isCreatingRootDocument = false;
+        setIsCreatingRootDocument(false);
       }
     };
 
     fetchRootDocument();
-  }, [router]);
+  }, [router, isCreatingRootDocument]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
