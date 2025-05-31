@@ -2,7 +2,11 @@
 
 import axios from 'axios';
 
+// Выводим в консоль значение переменной окружения для отладки
+console.log("NEXT_PUBLIC_API_URL from env:", process.env.NEXT_PUBLIC_API_URL);
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+console.log("Effective API_URL for axios:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
