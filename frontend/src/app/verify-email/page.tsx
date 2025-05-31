@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import api from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -19,8 +19,19 @@ import {
 } from "@/components/ui/card"
 import { useAuth } from "@/components/auth"
 import { Input } from "@/components/ui/input"
+import { Loader } from "@/components/ui/loader"
 
-export default function VerifyEmailPage() {
+// Компонент загрузки
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="lg" text="Загрузка..." />
+    </div>
+  )
+}
+
+// Основной компонент верификации
+function VerifyEmailContent() {
   const { user, isLoading: authLoading } = useAuth()
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
@@ -175,5 +186,14 @@ export default function VerifyEmailPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+// Обертка с Suspense
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

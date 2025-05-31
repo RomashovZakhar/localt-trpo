@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import api from "@/lib/api"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
@@ -73,14 +73,13 @@ const welcomeContent = {
   version: "2.27.0"
 };
 
-// Флаг для предотвращения параллельного создания корневого документа
-// @ts-ignore
-let isCreatingRootDocument = window.isCreatingRootDocument || false;
-// @ts-ignore
-window.isCreatingRootDocument = isCreatingRootDocument;
+// Удаляем глобальные переменные window
+// let isCreatingRootDocument = window.isCreatingRootDocument || false;
+// window.isCreatingRootDocument = isCreatingRootDocument;
 
 export default function Home() {
   const router = useRouter()
+  const [isCreatingRootDocument, setIsCreatingRootDocument] = useState(false)
 
   useEffect(() => {
     // Проверяем, авторизован ли пользователь
@@ -165,9 +164,7 @@ export default function Home() {
       }
       
       // Устанавливаем флаг, что процесс создания начался
-      isCreatingRootDocument = true;
-      // @ts-ignore
-      window.isCreatingRootDocument = true;
+      setIsCreatingRootDocument(true);
       
       try {
         // Создаем новый корневой документ с приветственным контентом
@@ -187,15 +184,13 @@ export default function Home() {
         // TODO: Добавить уведомление об ошибке
       } finally {
         // Сбрасываем флаг создания документа
-        isCreatingRootDocument = false;
-        // @ts-ignore
-        window.isCreatingRootDocument = false;
+        setIsCreatingRootDocument(false);
       }
     };
 
     // Запускаем процесс загрузки/создания корневого документа
     fetchRootDocument();
-  }, [router]);
+  }, [router, isCreatingRootDocument]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">

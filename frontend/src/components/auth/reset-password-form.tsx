@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -20,8 +20,19 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp"
 import api from "@/lib/api"
+import { Loader } from "@/components/ui/loader"
 
-export function ResetPasswordForm({
+// Компонент загрузки
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Loader size="lg" text="Загрузка..." />
+    </div>
+  )
+}
+
+// Основной компонент формы
+function ResetPasswordFormContent({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
@@ -181,5 +192,14 @@ export function ResetPasswordForm({
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Обертка с Suspense
+export function ResetPasswordForm(props: React.ComponentPropsWithoutRef<"div">) {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ResetPasswordFormContent {...props} />
+    </Suspense>
   )
 } 
