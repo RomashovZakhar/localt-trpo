@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import UserViewSet, RegisterView, VerifyEmailView, ResendVerificationView, EmailVerifiedTokenObtainPairView, PasswordResetRequestView, PasswordResetConfirmView
 from documents.views import DocumentViewSet
 from tasks.views import TaskViewSet
+from api.views import health
 
 # Создаем маршрутизатор
 router = DefaultRouter()
