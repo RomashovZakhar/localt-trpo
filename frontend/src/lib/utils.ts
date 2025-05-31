@@ -1,10 +1,9 @@
-<<<<<<< HEAD
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 // Функция для объединения классов Tailwind CSS
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+export function cn(...classes: (string | undefined | false | null)[]): string {
+  return classes.filter(Boolean).join(' ');
 }
 
 // Функция для генерации случайного цвета
@@ -18,11 +17,3 @@ export function randomColor() {
   
   return colors[Math.floor(Math.random() * colors.length)];
 }
-=======
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87

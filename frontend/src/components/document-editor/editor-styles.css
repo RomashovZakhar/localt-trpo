@@ -1,3 +1,27 @@
+/* Стили для редактора документов */
+
+.editor-container {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  padding: 24px;
+  min-height: 400px;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.editor-content {
+  min-height: 300px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #222;
+}
+
 /* Стили для заголовков в редакторе */
 .codex-editor h2 {
   font-size: 1.5rem !important;
@@ -368,7 +392,6 @@
   border-color: #f38ba8;
 }
 
-<<<<<<< HEAD
 /* Другие стили редактора */
 
 /* Основные стили для редактора */
@@ -460,6 +483,3 @@ h4.ce-header {
 .updating-content .ce-block {
   transition: opacity 0.1s ease;
 }
-=======
-/* Другие стили редактора */
->>>>>>> 1055d67876f61dc45fa5a69a988d44cca38b1d87

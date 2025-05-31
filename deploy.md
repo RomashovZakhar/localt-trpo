@@ -1,3 +1,236 @@
+Конечно! Вот самая подробная и пошаговая инструкция по деплою твоего проекта (Django + Next.js + Docker Compose) на VPS от Selectel. Я учту все нюансы, которые вижу в твоём коде и инфраструктуре.
+
+---
+
+# **Пошаговая инструкция по деплою на Selectel**
+
+---
+
+## **1. Регистрация и создание VPS**
+
+1. Перейди на [https://my.selectel.ru/](https://my.selectel.ru/) и зарегистрируйся.
+2. Пополни баланс (можно картой, ЮMoney и др.).
+3. В панели выбери "Облачные серверы" → "Создать сервер".
+4. Выбери:
+   - Облако: Public Cloud (или VPS/VDS)
+   - Операционная система: Ubuntu 22.04 LTS (или 20.04)
+   - Размер: 2 vCPU, 4 ГБ RAM, 40+ ГБ SSD (можно больше)
+   - Локация: Москва или Санкт-Петербург
+   - Публичный IP: обязательно добавить!
+5. Создай сервер и дождись, когда он будет готов.
+6. Скачай или создай SSH-ключ (или задай пароль для root/ubuntu).
+
+---
+
+## **2. Открытие портов (Firewall)**
+
+1. В панели управления Selectel найди раздел "Сетевые настройки" → "Группы безопасности" (или "Firewall").
+2. Убедись, что для твоего сервера разрешены входящие порты:
+   - 22 (SSH)
+   - 80 (HTTP)
+   - 443 (HTTPS)
+   - (опционально: 8000, 8001 — для тестов)
+3. Если нужно — создай новую группу безопасности и привяжи её к серверу.
+
+---
+
+## **3. Подключение к серверу**
+
+1. Открой терминал на своём компьютере.
+2. Подключись по SSH:
+   ```bash
+   ssh ubuntu@<ТВОЙ_IP>
+   ```
+   или, если root:
+   ```bash
+   ssh root@<ТВОЙ_IP>
+   ```
+   (или с ключом: `ssh -i путь_к_ключу ubuntu@<ТВОЙ_IP>`)
+
+---
+
+## **4. Установка Docker и Docker Compose**
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io
+sudo usermod -aG docker $USER
+# Выйди из SSH и зайди снова, чтобы применились права группы docker
+```
+
+**Docker Compose:**
+```bash
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+```
+
+---
+
+## **5. Клонирование проекта**
+
+```bash
+sudo apt install git -y
+git clone <URL_ТВОЕГО_РЕПОЗИТОРИЯ>
+cd <имя_папки_проекта>
+```
+
+---
+
+## **6. Настройка переменных окружения**
+
+1. Скопируй файл окружения:
+   ```bash
+   cp environment.env.example environment.env
+   ```
+2. Открой и отредактируй:
+   ```bash
+   nano environment.env
+   ```
+   - Впиши:
+     ```
+     DJANGO_ALLOWED_HOSTS=<ТВОЙ_IP>,<ТВОЙ_ДОМЕН>
+     FRONTEND_URL=https://<ТВОЙ_ДОМЕН>
+     CORS_ALLOWED_ORIGINS=https://<ТВОЙ_ДОМЕН>,http://<ТВОЙ_ДОМЕН>
+     NEXT_PUBLIC_WEBSOCKET_URL=wss://<ТВОЙ_ДОМЕН>
+     NEXT_PUBLIC_API_URL=https://<ТВОЙ_ДОМЕН>
+     ```
+   - Проверь пароли к БД, email и т.д.
+
+---
+
+## **7. Настройка docker-compose.yml**
+
+**В твоём проекте всё уже настроено правильно!**  
+Порты проброшены, nginx проксирует фронт и бэкенд, healthcheck прописан.
+
+---
+
+## **8. Запуск проекта**
+
+```bash
+docker-compose build
+docker-compose up -d
+```
+
+Проверь статус:
+```bash
+docker-compose ps
+```
+
+---
+
+## **9. Миграции и создание суперпользователя**
+
+```bash
+docker-compose exec backend python manage.py migrate
+docker-compose exec backend python manage.py createsuperuser
+```
+
+---
+
+## **10. Проверка работы**
+
+- Открой в браузере:  
+  http://<ТВОЙ_IP>  
+  или  
+  http://<ТВОЙ_ДОМЕН>
+- Должна открыться твоя страница (если видишь "Welcome to nginx" — останови системный nginx: `sudo systemctl stop nginx`).
+
+---
+
+## **11. Настройка домена**
+
+1. В панели управления доменом (например, reg.ru) создай A-запись:
+   - Имя: @
+   - Значение: <ТВОЙ_IP>
+2. Подожди 5–30 минут, пока обновится DNS.
+
+---
+
+## **12. Настройка SSL (Let's Encrypt)**
+
+1. Останови nginx-контейнер:
+   ```bash
+   docker-compose stop nginx
+   ```
+2. Установи certbot:
+   ```bash
+   sudo apt install certbot
+   ```
+3. Получи сертификат:
+   ```bash
+   sudo certbot certonly --standalone -d <ТВОЙ_ДОМЕН>
+   ```
+   Сертификаты будут в `/etc/letsencrypt/live/<ТВОЙ_ДОМЕН>/`
+
+4. В docker-compose.yml для nginx пропиши монтирование сертификатов:
+   ```yaml
+   volumes:
+     - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+     - static_volume:/var/www/static
+     - media_volume:/var/www/media
+     - /etc/letsencrypt/live/<ТВОЙ_ДОМЕН>/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+     - /etc/letsencrypt/live/<ТВОЙ_ДОМЕН>/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+   ```
+5. В nginx.conf раскомментируй и настрой блок server для 443 (SSL).
+
+6. Запусти nginx снова:
+   ```bash
+   docker-compose up -d nginx
+   ```
+
+---
+
+## **13. Проверка HTTPS**
+
+- Открой https://<ТВОЙ_ДОМЕН>  
+- Должен быть зелёный замок.
+
+---
+
+## **14. Автоматизация продления сертификата**
+
+Добавь в cron:
+```bash
+sudo crontab -e
+```
+И вставь строку:
+```
+0 3 * * * certbot renew --pre-hook "docker-compose stop nginx" --post-hook "docker-compose up -d nginx"
+```
+
+---
+
+## **15. Готово!**
+
+- Сайт работает по домену и по HTTPS.
+- WebSocket и API работают через nginx.
+- Всё управляется через docker-compose.
+
+---
+
+### **Если что-то не работает:**
+- Проверь логи:  
+  ```bash
+  docker-compose logs nginx
+  docker-compose logs backend
+  docker-compose logs frontend
+  ```
+- Проверь проброс портов и firewall.
+- Если видишь "Welcome to nginx" — останови системный nginx (`sudo systemctl stop nginx`).
+
+---
+
+**Если потребуется — помогу с любым шагом, просто напиши!**  
+Ты сможешь развернуть свой проект на Selectel за 30–60 минут по этой инструкции.  
+Удачи!
+
+
 
 # Пошаговая инструкция по деплою проекта в VK Cloud
 
