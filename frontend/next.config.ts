@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   
   /* Оптимизация изображений */
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'trpo-rodnik.ru'],
     // Добавьте сюда домены production сервера, например:
     // domains: ['localhost', 'example.com', 'cdn.example.com'],
     formats: ['image/avif', 'image/webp'],
@@ -24,9 +24,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL 
-          ? `${process.env.NEXT_PUBLIC_API_URL}/api/:path*` 
-          : 'http://localhost:8000/api/:path*', // Fallback
+        destination: 'https://trpo-rodnik.ru/api/:path*',
       },
     ];
   },
