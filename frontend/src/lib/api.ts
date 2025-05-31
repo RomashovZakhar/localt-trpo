@@ -39,7 +39,9 @@ if (typeof window !== 'undefined') {
         
         if (refreshToken) {
           try {
-            const { data } = await axios.post(`${API_URL}/token/refresh/`, {
+            // Убедимся, что URL для token/refresh формируется от базового URL API, а не от полного URL с /api в конце
+            const baseApiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/api$/, '');
+            const { data } = await axios.post(`${baseApiUrl}/api/token/refresh/`, {
               refresh: refreshToken,
             });
             
