@@ -26,4 +26,5 @@ urlpatterns = [
     # Убираем несуществующие импорты
     # path('', include('documents.urls')),
     # path('', include('users.urls')),
+    path('health/', health, name='health'),
 ] 
