@@ -1,5 +1,10 @@
 FROM node:18 AS builder
 
+# Объявляем build argument
+ARG NEXT_PUBLIC_API_URL
+# Устанавливаем ENV переменную из build argument, используем значение по умолчанию, если ARG не передан
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+
 # Установка рабочей директории
 WORKDIR /app
 
@@ -16,7 +21,10 @@ RUN npm install --legacy-peer-deps
 # Копирование исходного кода
 COPY . .
 
-# Сборка проекта
+# Выводим значение ENV для проверки на этапе сборки
+RUN echo "Build-time NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL"
+
+# Сборка проекта (теперь Next.js должен увидеть правильную ENV)
 RUN npm run build
 
 # Production-образ
@@ -25,6 +33,9 @@ FROM node:18 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+# Также передаем ENV в production-образ из аргумента сборки
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
 
 # Копирование необходимых файлов из стадии сборки
 COPY --from=builder /app/package.json .
