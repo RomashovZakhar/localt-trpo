@@ -102,6 +102,7 @@ services:
       context: ./frontend
       args:
         - NEXT_PUBLIC_API_URL=https://trpo-rodnik.ru/api
+        - NEXT_PUBLIC_WEBSOCKET_URL=wss://trpo-rodnik.ru
     volumes:
       - ./frontend:/app
       - /app/node_modules
