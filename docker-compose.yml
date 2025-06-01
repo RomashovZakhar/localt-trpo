@@ -143,6 +143,10 @@ services:
       - websocket
       - frontend
     restart: unless-stopped
+    command: >
+      sh -c "mkdir -p /var/www/static/chunks/app/documents/[id] &&
+             touch /var/www/static/chunks/app/documents/[id]/.gitkeep &&
+             nginx -g 'daemon off;'"
 
 volumes:
   postgres_data:
