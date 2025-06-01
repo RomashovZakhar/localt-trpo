@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useEffect, useState, useRef } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { AppSidebar } from "@/components/layout"
 import {
   Breadcrumb,
@@ -79,7 +79,6 @@ export default function DocumentPage() {
   const initialLoadDone = useRef(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showHistorySidebar, setShowHistorySidebar] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     setDocument(null);
@@ -132,25 +131,17 @@ export default function DocumentPage() {
         setBreadcrumbs(documentPath);
         
         initialLoadDone.current = true;
-      } catch (err: any) {
-        // Если ошибка 404 или 403 — перенаправляем на /documents
-        if (err?.response?.status === 404) {
-          toast.error("Документ не найден. Вы будете перенаправлены на список документов.");
-          router.push("/documents");
-        } else if (err?.response?.status === 403) {
-          toast.error("Нет доступа к документу. Вы будете перенаправлены на список документов.");
-          router.push("/documents");
-        } else {
-          setError("Не удалось загрузить документ");
-          toast.error("Не удалось загрузить документ");
-        }
+      } catch (err) {
+        console.error('Ошибка при загрузке документа:', err);
+        setError("Не удалось загрузить документ");
+        toast.error("Не удалось загрузить документ");
       } finally {
         setLoading(false);
       }
     };
 
     fetchDocument();
-  }, [id, router]);
+  }, [id]);
 
   useEffect(() => {
     if (!loading && isNewDocument.current && titleInputRef.current) {
