@@ -106,6 +106,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - /app/.next
       - next_static_volume:/app/.next/static
     depends_on:
       - backend
