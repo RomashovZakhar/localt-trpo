@@ -619,7 +619,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     // Функция для принудительного отключения редактирования
     const forceReadOnly = () => {
       try {
-        if (!editorRef.current) return;
+        if (!editorRef.current) return; // Добавлена проверка
         
         // Применяем класс, если он не применен
         if (!editorRef.current.classList.contains('editor-readonly')) {
@@ -1082,7 +1082,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   // Функция для автосохранения
   const triggerAutosave = useCallback((content: any) => {
     // Очищаем таймер, если он уже существует
-    if (saveTimeoutRef.current) {
+    if (saveTimeoutRef.current !== null) { // Добавлена проверка на null
       clearTimeout(saveTimeoutRef.current);
     }
     
@@ -1701,7 +1701,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     // Запускаем инициализацию с небольшой задержкой
     console.log("Установка таймера для инициализации EditorJS...");
     const timer = setTimeout(() => {
-      initEditor();
+      initEditor(); // Теперь initEditor определен
     }, 300); // Увеличиваем задержку для надежности
 
     return () => {
@@ -1738,7 +1738,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   // Очистка таймера автосохранения при размонтировании
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) {
+      if (saveTimeoutRef.current !== null) { // Добавлена проверка на null
         clearTimeout(saveTimeoutRef.current);
       }
     };
@@ -1762,7 +1762,9 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     }
     
     // Добавляем дебаунс для сохранения заголовка
-    clearTimeout(titleSaveTimeoutRef.current);
+    if (titleSaveTimeoutRef.current !== null) { // Добавлена проверка на null
+      clearTimeout(titleSaveTimeoutRef.current);
+    }
     titleSaveTimeoutRef.current = setTimeout(() => {
       console.log('Сохраняем новый заголовок:', newTitle);
       onChange({ ...documentData, title: newTitle });
@@ -2020,7 +2022,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
 
   // Обновляем высоту textarea при изменении заголовка
   useEffect(() => {
-    if (titleInputRef.current) {
+    if (titleInputRef && titleInputRef.current) { // Добавлена проверка на titleInputRef
       const textarea = titleInputRef.current;
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
@@ -2061,7 +2063,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
               // Запускаем инициализацию заново с небольшой задержкой
               setTimeout(initEditor, 200);
             })
-            .catch(err => {
+            .catch((err: Error) => { // Явно указываем тип Error
               console.error("Ошибка при уничтожении редактора:", err);
               // Всё равно пытаемся инициализировать заново
               editorInstanceRef.current = null;
