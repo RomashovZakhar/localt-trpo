@@ -619,7 +619,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     // Функция для принудительного отключения редактирования
     const forceReadOnly = () => {
       try {
-        if (!editorRef.current) return; // Добавлена проверка
+        if (!editorRef.current) return;
         
         // Применяем класс, если он не применен
         if (!editorRef.current.classList.contains('editor-readonly')) {
@@ -823,9 +823,8 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     const sessionid = window.document.cookie.split('; ').find((row: string) => row.startsWith('sessionid='))?.split('=')[1] || '';
     
     // Формируем URL для WebSocket соединения
-    const wsBaseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://trpo-rodnik.ru';
     const wsUrl = documentData.id
-      ? `${wsBaseUrl.replace(/^http/, 'ws')}/ws/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
+      ? `ws://localhost:8001/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
       : null;
     
     console.log(`Установка WebSocket соединения: ${wsUrl}`);
@@ -1082,7 +1081,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   // Функция для автосохранения
   const triggerAutosave = useCallback((content: any) => {
     // Очищаем таймер, если он уже существует
-    if (saveTimeoutRef.current !== null) { // Добавлена проверка на null
+    if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
@@ -1701,7 +1700,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     // Запускаем инициализацию с небольшой задержкой
     console.log("Установка таймера для инициализации EditorJS...");
     const timer = setTimeout(() => {
-      initEditor(); // Теперь initEditor определен
+      initEditor();
     }, 300); // Увеличиваем задержку для надежности
 
     return () => {
@@ -1738,7 +1737,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   // Очистка таймера автосохранения при размонтировании
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current !== null) { // Добавлена проверка на null
+      if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
@@ -1762,9 +1761,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     }
     
     // Добавляем дебаунс для сохранения заголовка
-    if (titleSaveTimeoutRef.current !== null) { // Добавлена проверка на null
-      clearTimeout(titleSaveTimeoutRef.current);
-    }
+    clearTimeout(titleSaveTimeoutRef.current);
     titleSaveTimeoutRef.current = setTimeout(() => {
       console.log('Сохраняем новый заголовок:', newTitle);
       onChange({ ...documentData, title: newTitle });
@@ -2022,7 +2019,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
 
   // Обновляем высоту textarea при изменении заголовка
   useEffect(() => {
-    if (titleInputRef && titleInputRef.current) { // Добавлена проверка на titleInputRef
+    if (titleInputRef.current) {
       const textarea = titleInputRef.current;
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
@@ -2063,7 +2060,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
               // Запускаем инициализацию заново с небольшой задержкой
               setTimeout(initEditor, 200);
             })
-            .catch((err: Error) => { // Явно указываем тип Error
+            .catch(err => {
               console.error("Ошибка при уничтожении редактора:", err);
               // Всё равно пытаемся инициализировать заново
               editorInstanceRef.current = null;
