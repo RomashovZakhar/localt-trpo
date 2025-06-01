@@ -16,27 +16,10 @@ import CursorOverlay from "./CursorOverlay"
 import EditorJS from "@editorjs/editorjs"
 import Header from "@editorjs/header"
 import List from "@editorjs/list"
-import Image from "@editorjs/image"
-// Добавляем статические импорты вместо динамических
-import Table from "@editorjs/table"
+import hljs from 'highlight.js';
 import { TaskModalsProvider, useTaskModals, TaskModalsContextType } from "@/components/tasks/task-modals-provider"
 import { GlobalTaskModals } from "@/components/tasks/global-task-modals"
 import React from "react"
-import Undo from 'editorjs-undo'
-import Checklist from '@editorjs/checklist'
-import Quote from '@editorjs/quote'
-import CodeTool from '@editorjs/code'
-import Marker from '@editorjs/marker'
-import { useSocket } from '@/hooks/use-socket'
-import styles from '@/styles/editor.module.css'
-import TextareaAutosize from 'react-textarea-autosize'
-import { useUser } from '@/components/auth'
-import * as Y from 'yjs'
-import { WebsocketProvider } from 'y-websocket'
-import { EditorJSFlexibleBlock } from './editor-tools/flexible-block'
-import { randomColor } from '@/lib/utils'
-import TaskTool from './tools/task-tool'
-import { EmojiPicker } from '@/components/document/emoji-picker'
 
 // Добавляем глобальные стили для курсоров
 import "./remote-cursor.css"
@@ -50,7 +33,6 @@ interface Document {
   content: unknown;
   parent: string | null;
   is_favorite?: boolean;
-  icon?: string;
 }
 
 interface DocumentEditorProps {
@@ -91,7 +73,6 @@ const NestedDocumentTool = {
     data: {
       id: string;
       title: string;
-      icon?: string;
     };
     block: HTMLElement;
     container: HTMLElement;
@@ -177,14 +158,10 @@ const NestedDocumentTool = {
         if (response.data && response.data.title) {
           console.log(`Получены данные, текущее название: ${this.data.title}, актуальное название: ${response.data.title}`);
           
-          // Обновляем данные только если название или иконка изменились
-          const titleChanged = this.data.title !== response.data.title;
-          const iconChanged = this.data.icon !== response.data.icon;
-          
-          if (titleChanged || iconChanged) {
+          // Обновляем данные только если название изменилось
+          if (this.data.title !== response.data.title) {
             this.data.title = response.data.title;
-            this.data.icon = response.data.icon;
-            console.log(`Название обновлено на: ${this.data.title}, иконка: ${this.data.icon || 'нет'}`);
+            console.log(`Название обновлено на: ${this.data.title}`);
             
             // Обновляем данные блока в EditorJS
             try {
@@ -192,7 +169,7 @@ const NestedDocumentTool = {
                 const blockIndex = this.api.blocks.getCurrentBlockIndex();
                 if (typeof blockIndex === 'number') {
                   await this.api.blocks.update(blockIndex, this.data);
-                  console.log(`Блок ${blockIndex} обновлен с новым названием и иконкой`);
+                  console.log(`Блок ${blockIndex} обновлен с новым названием`);
                 }
               }
             } catch (e) {
@@ -224,32 +201,13 @@ const NestedDocumentTool = {
       const linkContainer = document.createElement('div');
       linkContainer.className = 'py-1 px-2 -mx-2 my-0.5 inline-block rounded hover:bg-muted/80 transition-colors cursor-pointer';
       
-      // Создаем контейнер для иконки и текста
-      const contentContainer = document.createElement('div');
-      contentContainer.className = 'flex items-center';
-      
-      // Если есть иконка (эмодзи), добавляем ее
-      if (this.data.icon) {
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'mr-2 text-lg';
-        iconSpan.textContent = this.data.icon;
-        contentContainer.appendChild(iconSpan);
-      } else {
-        // Если нет иконки, добавляем стандартную иконку документа
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'mr-2 text-muted-foreground';
-        iconSpan.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>';
-        contentContainer.appendChild(iconSpan);
-      }
-      
       // Текст ссылки в стиле Notion с подчеркиванием
       const textSpan = document.createElement('span');
       textSpan.className = 'font-medium text-m text-foreground border-b border-muted-foreground/40';
       textSpan.textContent = safeTitle;
       
       // Добавляем текст в контейнер
-      contentContainer.appendChild(textSpan);
-      linkContainer.appendChild(contentContainer);
+      linkContainer.appendChild(textSpan);
       
       // Добавляем обработчик клика
       linkContainer.addEventListener('click', () => {
@@ -389,11 +347,6 @@ const NestedDocumentTool = {
           title: newTitle
         };
         
-        // Проверяем, есть ли у нового документа иконка
-        if (response.data.icon) {
-          this.data.icon = response.data.icon;
-        }
-        
         // Обновляем отображение блока - НЕ вызываем здесь renderExistingDocument,
         // так как он будет вызван позже при редиректе
         
@@ -408,8 +361,7 @@ const NestedDocumentTool = {
             type: 'nestedDocument',
             data: {
               id: newDocumentId,
-              title: newTitle,
-              icon: response.data.icon
+              title: newTitle
             }
           };
           
@@ -516,142 +468,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   const [userId, setUserId] = useState<string>('');
   const [username, setUsername] = useState<string>('');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const titleSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastDocumentContent = useRef<any>(document.content);
   const isSavingRef = useRef(false);
-  const hasChangesRef = useRef(false);
   
   // Переименуем параметр document чтобы избежать конфликта с глобальным window.document
   const documentData = document;
-  
-  // Состояние для определения роли пользователя (редактор или наблюдатель)
-  const [userRole, setUserRole] = useState<string | null>(null);
-  // Состояние для отслеживания, доступен ли редактор только для чтения
-  const [isReadOnly, setIsReadOnly] = useState<boolean>(false);
-  
-  // Получаем роль пользователя при загрузке
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        // Запрашиваем информацию о документе, чтобы получить список доступа и роль пользователя
-        if (documentData.id && user) {
-          try {
-            // Сначала попробуем получить сам документ без запроса прав доступа
-            const docResponse = await api.get(`/documents/${documentData.id}/`);
-            const isOwner = docResponse.data.owner === user.id;
-            
-            // Если владелец, сразу устанавливаем соответствующую роль
-            if (isOwner) {
-              setUserRole('owner');
-              setIsReadOnly(false);
-              console.log('Пользователь является владельцем документа');
-              return;
-            }
-            
-            // Если пользователь не владелец, но может получить доступ к документу,
-            // попробуем получить его роль напрямую
-            try {
-              // Используем правильный эндпоинт для получения роли
-              const roleResponse = await api.get(`/documents/${documentData.id}/my_role/`);
-              console.log('Получена роль пользователя:', roleResponse.data);
-              
-              if (roleResponse.data && roleResponse.data.role) {
-                setUserRole(roleResponse.data.role);
-                setIsReadOnly(roleResponse.data.role === 'viewer');
-                console.log(`Роль пользователя: ${roleResponse.data.role}, режим только для чтения: ${roleResponse.data.role === 'viewer'}`);
-              } else {
-                // Если не удалось получить конкретную роль, пробуем определить по возможности редактирования
-                try {
-                  // Пробуем отправить запрос на валидацию прав редактирования
-                  await api.post(`/documents/${documentData.id}/validate_edit/`);
-                  console.log('Пользователь может редактировать документ');
-                  setUserRole('editor');
-                  setIsReadOnly(false);
-                } catch (validateError) {
-                  console.log('Пользователь не может редактировать документ, устанавливаем режим просмотра');
-                  setUserRole('viewer');
-                  setIsReadOnly(true);
-                }
-              }
-            } catch (roleError) {
-              console.error('Ошибка при получении роли пользователя:', roleError);
-              
-              // Если не удалось получить роль, проверяем наличие доступа к документу
-              if (docResponse && docResponse.data) {
-                console.log('Документ доступен для просмотра, устанавливаем режим просмотра');
-                setUserRole('viewer');
-                setIsReadOnly(true);
-              }
-            }
-          } catch (docError) {
-            console.error('Ошибка при получении документа:', docError);
-            
-            // Если получили 403, пользователь не имеет доступа к документу
-            if ((docError as any).response?.status === 403) {
-              console.log('Нет доступа к документу, устанавливаем режим только для чтения');
-              setUserRole('viewer');
-              setIsReadOnly(true);
-            } else {
-              // Если ошибка не 403, то что-то другое пошло не так
-              console.error('Неизвестная ошибка при получении документа:', docError);
-              setUserRole('no_access');
-              setIsReadOnly(true);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Общая ошибка при получении прав доступа:', error);
-        // По умолчанию устанавливаем режим "только для чтения"
-        setIsReadOnly(true);
-      }
-    };
-    
-    fetchUserRole();
-  }, [documentData.id, user]);
-  
-  // Периодически проверяем и принудительно устанавливаем режим только для чтения
-  useEffect(() => {
-    // Если не в режиме только для чтения, ничего не делаем
-    if (!isReadOnly) return;
-
-    console.log("Настройка периодической проверки режима только для чтения");
-    
-    // Функция для принудительного отключения редактирования
-    const forceReadOnly = () => {
-      try {
-        if (!editorRef.current) return;
-        
-        // Применяем класс, если он не применен
-        if (!editorRef.current.classList.contains('editor-readonly')) {
-          console.log("Добавляем класс editor-readonly");
-          editorRef.current.classList.add('editor-readonly');
-        }
-        
-        // Ищем и отключаем все редактируемые элементы
-        const editableElements = editorRef.current.querySelectorAll('[contenteditable="true"]');
-        
-        if (editableElements.length > 0) {
-          console.log('Обнаружено редактируемых элементов в режиме только для чтения:', editableElements.length);
-          editableElements.forEach(el => {
-            (el as HTMLElement).setAttribute('contenteditable', 'false');
-          });
-        }
-        
-        // Убираем создание уведомления о режиме только для чтения
-      } catch (err) {
-        console.error('Ошибка при принудительном отключении редактирования:', err);
-      }
-    };
-    
-    // Запускаем функцию сразу
-    forceReadOnly();
-    
-    // Затем запускаем периодическую проверку каждые 500мс
-    const interval = setInterval(forceReadOnly, 500);
-    
-    // Очистка интервала при размонтировании
-    return () => clearInterval(interval);
-  }, [isReadOnly]);
 
   // Состояние для хранения содержимого документа
   const [content, setContent] = useState<any[]>([]);
@@ -672,11 +493,6 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     try {
       console.log('📥 Применяем внешний контент к редактору');
       
-      // Добавляем класс для предотвращения мерцания при обновлении
-      if (editorContainerRef.current) {
-        editorContainerRef.current.classList.add('updating-content');
-      }
-      
       // Обновляем lastContentRef, чтобы избежать повторной отправки тех же данных
       lastDocumentContent.current = content;
       
@@ -691,20 +507,9 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
         });
       }
       
-      // После применения обновлений, удаляем класс с небольшой задержкой
-      setTimeout(() => {
-        if (editorContainerRef.current) {
-          editorContainerRef.current.classList.remove('updating-content');
-        }
-      }, 100);
-      
       console.log('✅ Внешний контент успешно применен');
     } catch (error) {
       console.error('❌ Ошибка при применении внешнего контента:', error);
-      // Убираем класс даже при ошибке
-      if (editorContainerRef.current) {
-        editorContainerRef.current.classList.remove('updating-content');
-      }
     }
   }, [documentData, onChange]);
 
@@ -766,7 +571,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
         }
       },
       {
-        name: "Список задач",
+        name: "Чекбокс (задача)",
         icon: "☐",
         action: () => {
           if (editorInstanceRef.current) {
@@ -792,6 +597,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
           }
         }
       },
+      {
       {
         name: "Новый документ",
         icon: "📄",
@@ -1078,40 +884,10 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     }
   }, [documentData.id, documentData.content, getCachedContent, onChange]);
 
-  // Функция для автосохранения
+  // Модифицируем triggerAutosave для кэширования
   const triggerAutosave = useCallback((content: any) => {
-    // Очищаем таймер, если он уже существует
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    // В режиме "только для чтения" пропускаем сохранение
-    if (isReadOnly) {
-      console.log("Режим только для чтения, автосохранение отключено");
-      return;
-    }
-    
-    // Проверяем текущую роль пользователя
-    if (userRole === 'viewer') {
-      console.log("Пользователь наблюдатель, сохранение невозможно");
-      // Принудительно переключаем режим редактора
-      if (editorInstanceRef.current && !editorInstanceRef.current.readOnly) {
-        try {
-          console.log("Принудительное переключение режима редактора в только для чтения");
-          editorInstanceRef.current.readOnly.toggle(true);
-        } catch (err) {
-          console.error("Ошибка при переключении режима редактора:", err);
-        }
-      }
-      return;
-    }
-    
-    // Если уже идет сохранение, откладываем следующее
-    if (isSavingRef.current) {
-      console.log("Уже идет сохранение, откладываем следующее...");
-      setTimeout(() => triggerAutosave(content), 1000);
-      return;
-    }
+    // Если уже идет сохранение, пропускаем
+    if (isSavingRef.current) return;
     
     // Если контент не изменился, не сохраняем
     if (lastContentRef.current && 
@@ -1120,11 +896,16 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
       return;
     }
     
+    console.log('Контент изменился, планируем сохранение...');
+    console.log('Новый контент:', content);
+    
     // Сразу кэшируем контент локально для защиты от потери данных
     updateContentCache(documentData.id, content);
     
-    console.log('Контент изменился, планируем сохранение...');
-    console.log('Новый контент:', content);
+    // Очищаем предыдущий таймер, если он был
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
     
     // Устанавливаем новый таймер для сохранения с большим дебаунсом
     saveTimeoutRef.current = setTimeout(async () => {
@@ -1207,7 +988,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
         isSavingRef.current = false;
       }
     }, 300); // Уменьшаем задержку до 300 миллисекунд для более быстрой синхронизации
-  }, [documentData.id, documentData.parent, documentData.is_favorite, title, onChange, updateContentCache, userRole]);
+  }, [documentData.id, documentData.parent, documentData.is_favorite, title, onChange, updateContentCache]);
 
   // Создаем экземпляр EditorJS
   useEffect(() => {
@@ -1398,39 +1179,12 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
 
         // Создаем новый экземпляр
         console.log("Создаем экземпляр EditorJS...");
-        console.log("Режим только для чтения:", isReadOnly ? "ДА" : "НЕТ");
-        console.log("Роль пользователя:", userRole);
-        
         const editor = new EditorJS({
           holder: editorRef.current,
           data: editorData,
-          readOnly: isReadOnly, // Устанавливаем режим "только для чтения" на основе роли пользователя
           onReady: () => {
             console.log('EditorJS готов к работе');
-            console.log('Режим только для чтения установлен:', isReadOnly);
             editorInstanceRef.current = editor;
-            
-            // Добавляем визуальное отображение режима "только для чтения"
-            if (isReadOnly && editorRef.current) {
-              console.log('Применяем визуальные стили для режима только для чтения');
-              editorRef.current.classList.add('editor-readonly');
-              
-              // Удаляем создание уведомления о режиме "только для чтения"
-              
-              // Принудительно отключаем contentEditable для всех элементов
-              setTimeout(() => {
-                try {
-                  const editableElements = editorRef.current.querySelectorAll('[contenteditable="true"]');
-                  console.log('Найдено редактируемых элементов:', editableElements.length);
-                  editableElements.forEach(el => {
-                    (el as HTMLElement).setAttribute('contenteditable', 'false');
-                    console.log('Элемент переведен в режим только для чтения:', el);
-                  });
-                } catch (err) {
-                  console.error('Ошибка при принудительном отключении contentEditable:', err);
-                }
-              }, 100);
-            }
             
             // Устанавливаем редактор в состояние
             setEditor(editor);
@@ -1448,7 +1202,18 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
               console.log("Создаем пустой документ - нет данных контента");
             }
             
-            // Устанавливаем наблюдатель за изменениями в DOM
+            // После загрузки редактора применяем подсветку синтаксиса к блокам кода
+            applyCodeHighlighting();
+            
+            // Добавляем обработчик изменения выбранного языка
+            editorRef.current?.addEventListener('change', (e) => {
+              const target = e.target as HTMLElement;
+              if (target.tagName === 'SELECT' && target.closest('.ce-code')) {
+                setTimeout(applyCodeHighlighting, 0);
+              }
+            });
+            
+            // Устанавливаем наблюдатель за изменениями в DOM для подсветки кода
             const observer = new MutationObserver((mutations) => {
               // Проверяем, были ли изменения в блоках кода
               const shouldHighlight = mutations.some(mutation => {
@@ -1461,7 +1226,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
               });
               
               if (shouldHighlight) {
-                // Удаляем вызов applyCodeHighlighting
+                setTimeout(applyCodeHighlighting, 0);
               }
             });
             
@@ -1472,12 +1237,6 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
           },
           onChange: function(api: any) {
             try {
-              // Пропускаем обработку, если режим только для чтения
-              if (isReadOnly) {
-                console.log('Режим только для чтения, изменения игнорируются');
-                return;
-              }
-              
               // Пропускаем автосохранение, если сейчас идет сохранение
               if (isSavingRef.current) return;
               
@@ -1494,6 +1253,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
             } catch (err) {
               console.error('Ошибка в обработчике onChange:', err);
             }
+            
+            // Применяем подсветку синтаксиса при изменении содержимого
+            setTimeout(() => {
+              applyCodeHighlighting();
+            }, 100);
           },
           autofocus: true,
           placeholder: 'Нажмите "/" для вызова меню команд',
@@ -1541,13 +1305,13 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
               class: Image,
               config: {
                 endpoints: {
-                  byFile: '/api/upload-image',
-                  byUrl: '/api/upload-image-by-url',
+                  byFile: '/api/upload-image'
                 },
                 field: 'file',
                 types: 'image/*',
                 captionPlaceholder: 'Подпись к изображению',
                 uploader: {
+                  // Добавляем дополнительные заголовки, если нужны (например, для аутентификации)
                   uploadByFile(file: File) {
                     const formData = new FormData();
                     formData.append('file', file);
@@ -1563,6 +1327,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                           success: 1,
                           file: {
                             url: result.file.url,
+                            // Включаем дополнительные метаданные
                             name: result.file.name,
                             size: result.file.size
                           }
@@ -1582,45 +1347,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                         message: 'Ошибка при загрузке изображения'
                       };
                     });
-                  },
-                  uploadByUrl(url: string) {
-                    return fetch('/api/upload-image-by-url', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({ url })
-                    })
-                    .then(response => response.json())
-                    .then(result => {
-                      if (result.success === 1) {
-                        return {
-                          success: 1,
-                          file: {
-                            url: result.file.url,
-                            name: result.file.name || 'image.jpg',
-                            size: result.file.size
-                          }
-                        };
-                      } else {
-                        console.error('Ошибка загрузки изображения по URL:', result);
-                        return {
-                          success: 0,
-                          message: result.message || 'Ошибка загрузки изображения по URL'
-                        };
-                      }
-                    })
-                    .catch(error => {
-                      console.error('Ошибка при загрузке изображения по URL:', error);
-                      return {
-                        success: 0,
-                        message: 'Ошибка при загрузке изображения по URL'
-                      };
-                    });
                   }
                 }
               }
             },
+            // Добавляем инструменты без проверок
             table: {
               class: Table,
               inlineToolbar: true,
@@ -1629,7 +1360,28 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                 cols: 3,
               }
             },
-            nestedDocument: NestedDocumentTool
+                languages: {
+                  javascript: 'JavaScript',
+                  typescript: 'TypeScript',
+                  html: 'HTML',
+                  css: 'CSS',
+                  python: 'Python',
+                  java: 'Java',
+                  csharp: 'C#',
+                  cpp: 'C++',
+                  php: 'PHP',
+                  ruby: 'Ruby',
+                  go: 'Go',
+                  rust: 'Rust',
+                  bash: 'Bash',
+                  sql: 'SQL',
+                  json: 'JSON',
+                  xml: 'XML',
+                  markdown: 'Markdown'
+                }
+              }
+            },
+            nestedDocument: NestedDocumentTool 
           },
           i18n: {
             messages: {
@@ -1654,12 +1406,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                 "Text": "Текст",
                 "Header": "Заголовок",
                 "List": "Список",
-                "Checklist": "Список задач",
+                "Checklist": "Чек-лист",
                 "Image": "Изображение",
                 "Table": "Таблица",
-                "Nested Document": "Вложенный документ",
-                "Unordered List": "Маркированный список",
-                "Ordered List": "Нумерованный список"
+                "Code": "Код",
+                "Nested Document": "Вложенный документ"
               },
               tools: {
                 "header": {
@@ -1667,13 +1418,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                 },
                 "list": {
                   "Unordered": "Маркированный список",
-                  "Ordered": "Нумерованный список",
-                  "Unordered List": "Маркированный список",
-                  "Ordered List": "Нумерованный список"
-                },
-                "checklist": {
-                  "Checklist": "Список задач",
-                  "Checklist item": "Элемент списка задач"
+                  "Ordered": "Нумерованный список"
                 },
                 "table": {
                   "Add row above": "Добавить строку выше",
@@ -1683,8 +1428,8 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
                   "Delete row": "Удалить строку",
                   "Delete column": "Удалить столбец"
                 },
-                "nestedDocument": {
-                  "Nested Document": "Вложенный документ"
+                "code": {
+                  "Code": "Код"
                 }
               }
             }
@@ -1743,44 +1488,11 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     };
   }, []);
 
-  // Обработчик изменения заголовка
-  const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    // Игнорируем изменения в режиме "только для чтения"
-    if (isReadOnly) {
-      console.log("Режим только для чтения, изменение заголовка игнорируется");
-      return;
-    }
-    
+  // Обновляем заголовок документа
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
-    
-    // Автоматически подстраиваем высоту textarea под содержимое
-    if (e.target) {
-      e.target.style.height = 'auto';
-      e.target.style.height = e.target.scrollHeight + 'px';
-    }
-    
-    // Добавляем дебаунс для сохранения заголовка
-    clearTimeout(titleSaveTimeoutRef.current);
-    titleSaveTimeoutRef.current = setTimeout(() => {
-      console.log('Сохраняем новый заголовок:', newTitle);
-      onChange({ ...documentData, title: newTitle });
-      
-      // Отправляем запрос на обновление заголовка
-      api.put(`/documents/${documentData.id}/`, {
-        title: newTitle,
-        content: documentData.content,
-        parent: documentData.parent,
-        is_favorite: documentData.is_favorite,
-        icon: documentData.icon
-      })
-      .then(() => {
-        console.log('Заголовок успешно сохранен');
-      })
-      .catch((error) => {
-        console.error('Ошибка при сохранении заголовка:', error);
-      });
-    }, 500);
+    onChange({ ...documentData, title: newTitle });
   };
 
   // Сохранение перед уходом
@@ -1963,377 +1675,332 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     };
   }, [documentData.id, setupWs]);
 
-  // Функция для логирования данных редактора
-  const logEditorData = async () => {
+  // Добавляем функцию для применения подсветки синтаксиса к блокам кода
+  function applyCodeHighlighting() {
+    if (!editorRef.current) return;
+    
     try {
-      if (!editorInstanceRef.current) {
-        console.error("Редактор не определен");
-        return;
-      }
+      // Находим все блоки кода в редакторе
+      const codeBlocks = editorRef.current.querySelectorAll('.ce-block--code');
       
-      // Получаем данные из редактора
-      const outputData = await editorInstanceRef.current.save();
-      
-      // Логируем структуру данных для диагностики
-      console.log("Выходные данные редактора:", outputData);
-      
-      if (outputData && outputData.blocks) {
-        // Подсчет всех типов блоков
-        const blockTypes: Record<string, number> = {};
-        outputData.blocks.forEach((block: any) => {
-          const blockType = block.type as string;
-          if (!blockTypes[blockType]) {
-            blockTypes[blockType] = 0;
-          }
-          blockTypes[blockType]++;
+      if (codeBlocks.length === 0) {
+        console.log('Блоки кода не найдены');
+        
+        // Попробуем использовать другой селектор
+        const alternativeBlocks = editorRef.current.querySelectorAll('.ce-block:has(.ce-code)');
+        if (alternativeBlocks.length > 0) {
+          console.log(`Найдено ${alternativeBlocks.length} блоков кода по альтернативному селектору`);
           
-          // Выводим данные о каждом блоке
-          console.log(`Блок типа ${blockType}:`, block);
-        });
-        
-        console.log("Типы блоков в документе:", blockTypes);
-        
-        // Проверяем list блоки, которые могут быть чеклистами
-        const lists = outputData.blocks.filter(
-          (block: any) => block.type === 'list'
-        );
-        console.log("Найденные списки:", lists);
-        
-        const checklists = outputData.blocks.filter(
-          (block: any) => block.type === 'checklist'
-        );
-        console.log("Найденные чеклисты:", checklists);
-      }
-    } catch (error) {
-      console.error("Ошибка получения данных редактора:", error);
-    }
-  };
-
-  // Запускаем логирование данных после инициализации редактора
-  setTimeout(() => {
-    if (editorInstanceRef.current) {
-      console.log("Запуск диагностики данных редактора...");
-      logEditorData();
-    }
-  }, 5000);
-
-  // Обновляем высоту textarea при изменении заголовка
-  useEffect(() => {
-    if (titleInputRef.current) {
-      const textarea = titleInputRef.current;
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    }
-  }, [title]);
-
-  // Пересоздаем редактор при изменении режима чтения/редактирования
-  useEffect(() => {
-    console.log("Изменился режим чтения на:", isReadOnly ? "только чтение" : "редактирование");
-    
-    // Если редактор еще не создан, то пропускаем
-    if (!editorInstanceRef.current || !isReady) {
-      console.log("Редактор еще не инициализирован, пропускаем пересоздание");
-      return;
-    }
-    
-    // Принудительно пересоздаем редактор с новым режимом
-    console.log("Пересоздаем редактор с новым режимом чтения");
-    
-    // Используем setTimeout, чтобы дать другим эффектам выполниться
-    setTimeout(() => {
-      try {
-        // Флаг для предотвращения рекурсивного вызова
-        const tempFlag = isFirstRender.current;
-        isFirstRender.current = true;
-        
-        // Уничтожаем старый экземпляр
-        if (editorInstanceRef.current) {
-          editorInstanceRef.current.destroy()
-            .then(() => {
-              console.log("Редактор успешно уничтожен");
-              editorInstanceRef.current = null;
-              
-              // Сбрасываем редактор в состоянии
-              setEditor(null);
-              setIsReady(false);
-              
-              // Запускаем инициализацию заново с небольшой задержкой
-              setTimeout(initEditor, 200);
-            })
-            .catch(err => {
-              console.error("Ошибка при уничтожении редактора:", err);
-              // Всё равно пытаемся инициализировать заново
-              editorInstanceRef.current = null;
-              setEditor(null);
-              setIsReady(false);
-              setTimeout(initEditor, 200);
-            });
-        }
-        
-        // Восстанавливаем флаг
-        isFirstRender.current = tempFlag;
-      } catch (err) {
-        console.error("Ошибка при пересоздании редактора:", err);
-      }
-    }, 100);
-  }, [isReadOnly]);
-
-  // Добавляем периодическую проверку роли пользователя
-  useEffect(() => {
-    // Не запускаем проверку, если документ не загружен или нет пользователя
-    if (!documentData.id || !user) return;
-
-    console.log("Настройка периодической проверки роли пользователя");
-    
-    // Функция для проверки роли
-    const checkUserRole = async () => {
-      try {
-        // Вместо проверки прав доступа, проверяем возможность редактирования
-        try {
-          // Получаем документ
-          const docResponse = await api.get(`/documents/${documentData.id}/`);
-          const isOwner = docResponse.data.owner === user.id;
-          
-          if (isOwner) {
-            // Если роль изменилась
-            if (userRole !== 'owner') {
-              console.log('Пользователь стал владельцем, обновляем роль');
-              setUserRole('owner');
-              setIsReadOnly(false);
-              updateEditorReadOnlyState(false);
-            }
-            return;
-          }
-          
-          // Получаем текущую роль пользователя через правильный эндпоинт
-          try {
-            const roleResponse = await api.get(`/documents/${documentData.id}/my_role/`);
-            console.log('Получена роль пользователя при проверке:', roleResponse.data);
-            
-            if (roleResponse.data && roleResponse.data.role) {
-              // Если роль изменилась
-              if (userRole !== roleResponse.data.role) {
-                console.log(`Роль пользователя изменилась: ${userRole} -> ${roleResponse.data.role}`);
-                setUserRole(roleResponse.data.role);
-                const newReadOnly = roleResponse.data.role === 'viewer';
-                setIsReadOnly(newReadOnly);
-                updateEditorReadOnlyState(newReadOnly);
-              }
-            } else {
-              // Если не удалось получить конкретную роль, пробуем определить по возможности редактирования
-              try {
-                // Пробуем отправить запрос на валидацию прав редактирования
-                await api.post(`/documents/${documentData.id}/validate_edit/`);
-                
-                // Если пользователь успешно отправил запрос на проверку редактирования, значит редактор
-                if (userRole !== 'editor') {
-                  console.log('Пользователь стал редактором, обновляем роль');
-                  setUserRole('editor');
-                  setIsReadOnly(false);
-                  updateEditorReadOnlyState(false);
-                }
-              } catch (validateError) {
-                // Если получаем ошибку при проверке возможности редактирования, значит просмотрщик
-                if (userRole !== 'viewer') {
-                  console.log('Пользователь стал просмотрщиком, обновляем роль');
-                  setUserRole('viewer');
-                  setIsReadOnly(true);
-                  updateEditorReadOnlyState(true);
-                }
-              }
-            }
-          } catch (roleError) {
-            console.error('Ошибка при получении роли пользователя:', roleError);
-            
-            // Если пользователь по-прежнему имеет доступ к документу, но не может узнать свою роль,
-            // пробуем проверить возможность редактирования
+          // Используем новый список блоков
+          alternativeBlocks.forEach((block, index) => {
             try {
-              // Пробуем отправить запрос на валидацию прав редактирования
-              await api.post(`/documents/${documentData.id}/validate_edit/`);
+              const codeElement = block.querySelector('.ce-code');
+              if (!codeElement) return;
               
-              // Если пользователь может редактировать, но не может получить роль напрямую
-              if (userRole !== 'editor') {
-                console.log('Пользователь может редактировать, обновляем роль');
-                setUserRole('editor');
-                setIsReadOnly(false);
-                updateEditorReadOnlyState(false);
-              }
-            } catch (validateError) {
-              // Если не может редактировать, значит просмотрщик
-              if (userRole !== 'viewer') {
-                console.log('Пользователь стал просмотрщиком (через проверку редактирования)');
-                setUserRole('viewer');
-                setIsReadOnly(true);
-                updateEditorReadOnlyState(true);
-              }
+              console.log(`Обрабатываем блок кода ${index} по альтернативному селектору`);
+              
+              // Дальше идет тот же код обработки...
+              // ... existing code for processing code blocks ...
+            } catch (e) {
+              console.error(`Ошибка при обработке блока кода ${index} по альтернативному селектору:`, e);
             }
-          }
-        } catch (docError) {
-          console.error('Ошибка при получении документа:', docError);
+          });
           
-          // Если получили 403, пользователь потерял доступ к документу
-          if ((docError as any).response?.status === 403 && userRole !== 'viewer') {
-            console.log('Пользователь потерял доступ, переключаем на просмотр');
-            setUserRole('viewer');
-            setIsReadOnly(true);
-            updateEditorReadOnlyState(true);
-          }
+          return;
         }
-      } catch (error) {
-        console.error("Общая ошибка при проверке роли пользователя:", error);
-      }
-    };
-    
-    // Выносим логику обновления редактора в отдельную функцию
-    const updateEditorReadOnlyState = (newReadOnly: boolean) => {
-      // Если редактор существует
-      if (editorInstanceRef.current) {
-        console.log(`Обновляем состояние редактора, режим только для чтения: ${newReadOnly}`);
         
-        // Устанавливаем свойство readOnly у редактора
+        // Попытка найти по другому селектору
+        const simpleBlocks = editorRef.current.querySelectorAll('.ce-code');
+        if (simpleBlocks.length > 0) {
+          console.log(`Найдено ${simpleBlocks.length} блоков кода по простому селектору .ce-code`);
+          
+          // Обрабатываем блоки кода по простому селектору
+          simpleBlocks.forEach((codeElement, index) => {
+            try {
+              console.log(`Обрабатываем блок кода ${index} по простому селектору`);
+              
+              // Ищем select для выбора языка
+              let languageSelect = codeElement.querySelector('select');
+              
+              // Если select не найден, создаем его
+              if (!languageSelect) {
+                const newSelect = window.document.createElement('select');
+                newSelect.className = 'ce-code__languageSelect';
+                
+                // Добавляем опции для языков
+                const languages = {
+                  plaintext: 'Простой текст',
+                  javascript: 'JavaScript',
+                  typescript: 'TypeScript',
+                  html: 'HTML',
+                  css: 'CSS',
+                  python: 'Python',
+                  java: 'Java',
+                  csharp: 'C#',
+                  cpp: 'C++',
+                  php: 'PHP',
+                  ruby: 'Ruby',
+                  go: 'Go',
+                  rust: 'Rust',
+                  bash: 'Bash',
+                  sql: 'SQL',
+                  json: 'JSON',
+                  xml: 'XML',
+                  markdown: 'Markdown'
+                };
+                
+                // Добавляем опции в select
+                Object.entries(languages).forEach(([value, label]) => {
+                  const option = window.document.createElement('option');
+                  option.value = value;
+                  option.text = label;
+                  newSelect.appendChild(option);
+                });
+                
+                // Устанавливаем значение по умолчанию
+                newSelect.value = 'javascript';
+                
+                // Добавляем в DOM
+                codeElement.appendChild(newSelect);
+                
+                // Добавляем обработчик события изменения языка
+                newSelect.addEventListener('change', function() {
+                  const language = this.value;
+                  const textarea = codeElement.querySelector('.ce-code__textarea');
+                  const pre = codeElement.querySelector('pre');
+                  const code = pre ? pre.querySelector('code') : null;
+                  
+                  // Меняем язык для textarea
+                  if (textarea) {
+                    textarea.setAttribute('data-language', language);
+                  }
+                  
+                  // Применяем подсветку к коду
+                  setTimeout(applyCodeHighlighting, 0);
+                });
+                
+                // Обновляем переменную
+                languageSelect = newSelect;
+              }
+              
+              // Получаем язык из select
+              const selectedLanguage = languageSelect.value || 'plaintext';
+              
+              // Находим элементы для редактирования и просмотра
+              const textarea = codeElement.querySelector('.ce-code__textarea');
+              const pre = codeElement.querySelector('pre');
+              const codeView = pre ? pre.querySelector('code') : null;
+              
+              // Если есть textarea, устанавливаем атрибут для языка
+              if (textarea) {
+                textarea.setAttribute('data-language', selectedLanguage);
+              }
+              
+              // Если есть блок просмотра кода, применяем подсветку
+              if (codeView) {
+                // Получаем содержимое кода
+                const codeContent = codeView.textContent || '';
+                
+                // Удаляем существующие классы языка
+                const existingClasses = Array.from(codeView.classList)
+                  .filter(cls => cls.startsWith('language-'));
+                
+                existingClasses.forEach(cls => {
+                  codeView.classList.remove(cls);
+                });
+                
+                // Добавляем класс языка
+                if (selectedLanguage && selectedLanguage !== 'plaintext') {
+                  codeView.classList.add(`language-${selectedLanguage}`);
+                  
+                  // Применяем подсветку для конкретного языка
+                  hljs.highlightElement(codeView);
+                } else {
+                  // Для plaintext или автоопределение
+                  const result = hljs.highlightAuto(codeContent);
+                  codeView.innerHTML = result.value;
+                  
+                  if (result.language) {
+                    codeView.classList.add(`language-${result.language}`);
+                    
+                    // Обновляем select до определенного языка, если был выбран plaintext
+                    if (selectedLanguage === 'plaintext') {
+                      // Найдем опцию с определенным языком 
+                      const option = Array.from(languageSelect.options)
+                        .find(opt => opt.value === result.language);
+                      
+                      // Если такой язык есть в списке, выбираем его
+                      if (option) {
+                        languageSelect.value = result.language;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              console.error(`Ошибка при обработке блока кода ${index} по простому селектору:`, e);
+            }
+          });
+          
+          return;
+        } else {
+          console.log('Блоки кода не найдены ни по одному селектору');
+        }
+      }
+      
+      console.log(`Найдено ${codeBlocks.length} блоков кода`);
+      
+      codeBlocks.forEach((block, index) => {
         try {
-          // Проверяем, соответствует ли текущее состояние редактора требуемому
-          const currentReadOnly = editorInstanceRef.current.readOnly?.isEnabled || false;
+          // Проверяем есть ли выпадающий список языков, если нет - добавляем
+          const codeElement = block.querySelector('.ce-code');
+          if (!codeElement) return;
           
-          if (currentReadOnly !== newReadOnly) {
-            console.log(`Меняем состояние readOnly с ${currentReadOnly} на ${newReadOnly}`);
-            editorInstanceRef.current.readOnly.toggle(newReadOnly);
-            console.log("Режим readOnly обновлен в редакторе");
-          } else {
-            console.log(`Состояние readOnly уже установлено в ${newReadOnly}, пропускаем обновление`);
-          }
-        } catch (err) {
-          console.error("Ошибка при обновлении режима readOnly:", err);
-        }
-        
-        // Принудительно обновляем DOM
-        if (editorRef.current) {
-          // Добавляем класс для стилизации режима только для чтения
-          editorRef.current.classList.toggle('editor-readonly', newReadOnly);
+          // Ищем select для выбора языка
+          let languageSelect = codeElement.querySelector('select');
           
-          // Обрабатываем уведомление о режиме только для чтения
-          const existingNotice = editorRef.current.querySelector('.readonly-notice');
-          if (newReadOnly) {
-            // Если нужен режим только для чтения и уведомление отсутствует, добавляем его
-            if (!existingNotice) {
-              const readOnlyNotice = window.document.createElement('div');
-              readOnlyNotice.className = 'readonly-notice';
-              readOnlyNotice.textContent = 'У вас нет прав на редактирование этого документа';
-              editorRef.current.prepend(readOnlyNotice);
-            }
+          // Если select не найден, создаем его
+          if (!languageSelect) {
+            const newSelect = window.document.createElement('select');
+            newSelect.className = 'ce-code__languageSelect';
             
-            // Отключаем все редактируемые элементы
-            const editableElements = editorRef.current.querySelectorAll('[contenteditable="true"]');
-            if (editableElements.length > 0) {
-              console.log('Отключаем редактируемые элементы, количество:', editableElements.length);
-              editableElements.forEach(el => {
-                (el as HTMLElement).setAttribute('contenteditable', 'false');
-              });
-            }
-          } else {
-            // Если режим редактирования, удаляем уведомление
-            if (existingNotice) {
-              existingNotice.remove();
-            }
+            // Добавляем опции для языков
+            const languages = {
+              plaintext: 'Простой текст',
+              javascript: 'JavaScript',
+              typescript: 'TypeScript',
+              html: 'HTML',
+              css: 'CSS',
+              python: 'Python',
+              java: 'Java',
+              csharp: 'C#',
+              cpp: 'C++',
+              php: 'PHP',
+              ruby: 'Ruby',
+              go: 'Go',
+              rust: 'Rust',
+              bash: 'Bash',
+              sql: 'SQL',
+              json: 'JSON',
+              xml: 'XML',
+              markdown: 'Markdown'
+            };
             
-            // Включаем редактирование для элементов
-            if (!editorInstanceRef.current.readOnly) {
-              const editableBlocks = editorRef.current.querySelectorAll('.ce-block__content');
-              editableBlocks.forEach(el => {
-                (el as HTMLElement).setAttribute('contenteditable', 'true');
-              });
+            // Добавляем опции в select
+            Object.entries(languages).forEach(([value, label]) => {
+              const option = window.document.createElement('option');
+              option.value = value;
+              option.text = label;
+              newSelect.appendChild(option);
+            });
+            
+            // Устанавливаем значение по умолчанию
+            newSelect.value = 'javascript';
+            
+            // Добавляем в DOM
+            codeElement.appendChild(newSelect);
+            
+            // Добавляем обработчик события изменения языка
+            newSelect.addEventListener('change', function() {
+              const language = this.value;
+              const textarea = codeElement.querySelector('.ce-code__textarea');
+              const pre = codeElement.querySelector('pre');
+              const code = pre ? pre.querySelector('code') : null;
+              
+              // Меняем язык для textarea
+              if (textarea) {
+                textarea.setAttribute('data-language', language);
+              }
+              
+              // Применяем подсветку к коду
+              setTimeout(applyCodeHighlighting, 0);
+            });
+            
+            // Обновляем переменную
+            languageSelect = newSelect;
+          }
+          
+          // Получаем язык из select
+          const selectedLanguage = languageSelect.value || 'plaintext';
+          
+          // Находим элементы для редактирования и просмотра
+          const textarea = codeElement.querySelector('.ce-code__textarea');
+          const pre = codeElement.querySelector('pre');
+          const codeView = pre ? pre.querySelector('code') : null;
+          
+          // Если есть textarea, устанавливаем атрибут для языка
+          if (textarea) {
+            textarea.setAttribute('data-language', selectedLanguage);
+          }
+          
+          // Если есть блок просмотра кода, применяем подсветку
+          if (codeView) {
+            // Получаем содержимое кода
+            const codeContent = codeView.textContent || '';
+            
+            // Удаляем существующие классы языка
+            const existingClasses = Array.from(codeView.classList)
+              .filter(cls => cls.startsWith('language-'));
+            
+            existingClasses.forEach(cls => {
+              codeView.classList.remove(cls);
+            });
+            
+            // Добавляем класс языка
+            if (selectedLanguage && selectedLanguage !== 'plaintext') {
+              codeView.classList.add(`language-${selectedLanguage}`);
+              
+              // Применяем подсветку для конкретного языка
+              hljs.highlightElement(codeView);
+            } else {
+              // Для plaintext или автоопределение
+              const result = hljs.highlightAuto(codeContent);
+              codeView.innerHTML = result.value;
+              
+              if (result.language) {
+                codeView.classList.add(`language-${result.language}`);
+                
+                // Обновляем select до определенного языка, если был выбран plaintext
+                if (selectedLanguage === 'plaintext') {
+                  // Найдем опцию с определенным языком 
+                  const option = Array.from(languageSelect.options)
+                    .find(opt => opt.value === result.language);
+                  
+                  // Если такой язык есть в списке, выбираем его
+                  if (option) {
+                    languageSelect.value = result.language;
+                  }
+                }
+              }
             }
           }
+        } catch (e) {
+          console.error(`Ошибка при обработке блока кода ${index}:`, e);
         }
-      }
-    };
-    
-    // Проверяем роль каждые 10 секунд
-    const interval = setInterval(checkUserRole, 10000);
-    
-    // Разовая проверка при монтировании
-    checkUserRole();
-    
-    // Очистка интервала при размонтировании
-    return () => clearInterval(interval);
-  }, [documentData.id, user, userRole]);
+      });
+    } catch (e) {
+      console.error('Ошибка при применении подсветки синтаксиса:', e);
+    }
+  }
 
   return (
     <TaskModalsProvider>
       <GlobalTaskModals />
       <div className="flex flex-col h-full relative">
         <div className="flex items-center justify-between mx-auto w-full" style={{ maxWidth: '650px', padding: '20px 0' }}>
-          <div className="flex flex-col w-full">
-            <EmojiPicker
-              currentEmoji={document.icon}
-              disabled={isReadOnly}
-              onEmojiSelect={(emoji) => {
-                // Если в режиме только для чтения, игнорируем событие
-                if (isReadOnly) {
-                  console.log("Режим только для чтения, изменение эмодзи игнорируется");
-                  return;
-                }
-                
-                // Создаем объект с обновленным emoji
-                const updatedDoc = { ...document, icon: emoji };
-                // Обновляем UI
-                onChange(updatedDoc);
-                
-                // Отправляем обновление на сервер
-                api.put(`/documents/${document.id}/`, {
-                  title: document.title,
-                  content: document.content,
-                  parent: document.parent,
-                  is_favorite: document.is_favorite,
-                  icon: emoji
-                })
-                .then(() => {
-                  console.log('Эмодзи успешно сохранен:', emoji);
-                  
-                  // Оповещаем другие вкладки об изменении эмодзи
-                  try {
-                    const iconUpdateEvent = {
-                      documentId: document.id,
-                      icon: emoji,
-                      timestamp: Date.now()
-                    };
-                    localStorage.setItem(`document_icon_update_${document.id}`, JSON.stringify(iconUpdateEvent));
-                    
-                    // Вызываем событие storage вручную для текущей вкладки
-                    window.dispatchEvent(new StorageEvent('storage', {
-                      key: `document_icon_update_${document.id}`,
-                      newValue: JSON.stringify(iconUpdateEvent)
-                    }));
-                  } catch (err) {
-                    console.error('Ошибка при сохранении обновления иконки в localStorage:', err);
-                  }
-                })
-                .catch((error) => {
-                  console.error('Ошибка при сохранении эмодзи:', error);
-                });
-              }}
-            />
-            <div className="w-full">
-              <textarea
-                className="border-none text-3xl font-bold focus-visible:ring-0 focus-visible:outline-none p-0 mt-2 w-full resize-none overflow-hidden bg-transparent"
-                placeholder="Untitled"
-                value={title}
-                onChange={handleTitleChange}
-                readOnly={isReadOnly}
-                disabled={isReadOnly}
-                ref={titleInputRef as any}
-                rows={Math.min(3, title.split('\n').length)}
-                style={{
-                  height: 'auto',
-                  minHeight: '44px',
-                  opacity: isReadOnly ? 0.8 : 1,
-                  cursor: isReadOnly ? 'not-allowed' : 'text'
-                }}
-              />
-            </div>
-          </div>
+          <Input
+            className="border-none text-3xl font-bold focus-visible:ring-0 p-0 h-auto"
+            placeholder="Untitled"
+            value={title}
+            onChange={handleTitleChange}
+            ref={titleInputRef as any}
+            autoFocus={false}
+          />
+          
+          {/* Удаляем панель кнопок для загрузки модулей */}
         </div>
         
+        {/* Контейнер редактора с ref и оверлеем курсоров */}
         <div 
           ref={editorContainerRef}
           className="flex-1 editor-container relative" 
@@ -2341,6 +2008,7 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
         >
           <div ref={editorRef} className="min-h-full" />
           
+          {/* Компонент для отображения курсоров */}
           <CursorOverlay 
             cursors={remoteCursors} 
             containerRef={editorContainerRef} 
