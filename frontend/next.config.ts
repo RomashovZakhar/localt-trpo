@@ -10,6 +10,23 @@ const nextConfig: NextConfig = {
     styledComponents: true,
   },
   
+  /* Webpack конфигурация для явной передачи переменных окружения */
+  webpack: (config, { isServer }) => {
+    // Выводим переменные окружения во время сборки
+    console.log('Webpack NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+    console.log('Webpack NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+    
+    // Определяем DefinePlugin для явного экспорта переменных окружения
+    config.plugins.push(
+      new config.webpack.DefinePlugin({
+        'process.env.NEXT_PUBLIC_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_URL),
+        'process.env.NEXT_PUBLIC_WEBSOCKET_URL': JSON.stringify(process.env.NEXT_PUBLIC_WEBSOCKET_URL),
+      })
+    );
+    
+    return config;
+  },
+  
   /* Оптимизация изображений */
   images: {
     domains: ['localhost'],

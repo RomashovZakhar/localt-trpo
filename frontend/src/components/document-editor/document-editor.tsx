@@ -823,7 +823,9 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     const sessionid = window.document.cookie.split('; ').find((row: string) => row.startsWith('sessionid='))?.split('=')[1] || '';
     
     // Формируем URL для WebSocket соединения
-    const wsBaseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8001';
+    console.log('Переменная NEXT_PUBLIC_WEBSOCKET_URL в document-editor:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
+    // Используем wss://trpo-rodnik.ru как резервный вариант для production
+    const wsBaseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://trpo-rodnik.ru';
     const wsUrl = documentData.id
       ? `${wsBaseUrl}/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
       : null;
