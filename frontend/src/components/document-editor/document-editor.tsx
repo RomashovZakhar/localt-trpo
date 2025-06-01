@@ -823,8 +823,9 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     const sessionid = window.document.cookie.split('; ').find((row: string) => row.startsWith('sessionid='))?.split('=')[1] || '';
     
     // Формируем URL для WebSocket соединения
+    const wsBaseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://trpo-rodnik.ru';
     const wsUrl = documentData.id
-      ? `ws://localhost:8001/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
+      ? `${wsBaseUrl.replace(/^http/, 'ws')}/ws/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
       : null;
     
     console.log(`Установка WebSocket соединения: ${wsUrl}`);
