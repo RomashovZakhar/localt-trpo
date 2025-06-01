@@ -107,7 +107,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
-      - next_static_volume:/app/.next
+      - next_static_volume:/app/.next/static
     depends_on:
       - backend
       - websocket
@@ -136,7 +136,7 @@ services:
       - static_volume:/var/www/static
       - media_volume:/var/www/media
       - ./nginx/ssl:/etc/nginx/ssl
-      - next_static_volume:/var/www/static/_next
+      - next_static_volume:/var/www/static/_next/static
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
