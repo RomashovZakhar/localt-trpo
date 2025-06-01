@@ -824,16 +824,8 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     
     // Формируем URL для WebSocket соединения
     console.log('Переменная NEXT_PUBLIC_WEBSOCKET_URL в document-editor:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
-    
-    // Получаем текущий хост для формирования WebSocket URL
-    const currentHost = typeof window !== 'undefined' ? window.location.host : '';
-    const isSecureConnection = typeof window !== 'undefined' ? window.location.protocol === 'https:' : false;
-    
-    // Принудительно используем текущий домен в production, либо fallback на wss://trpo-rodnik.ru
-    const wsBaseUrl = currentHost 
-      ? `${isSecureConnection ? 'wss' : 'ws'}://${currentHost}`
-      : (process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://trpo-rodnik.ru');
-    
+    // Используем wss://trpo-rodnik.ru как резервный вариант для production
+    const wsBaseUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'wss://trpo-rodnik.ru';
     const wsUrl = documentData.id
       ? `${wsBaseUrl}/documents/${documentData.id}/?token=${token}&sessionid=${sessionid}`
       : null;
