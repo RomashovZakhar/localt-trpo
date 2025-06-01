@@ -218,7 +218,7 @@ AUTH_USER_MODEL = 'users.User'
 # Настройки безопасности для production
 if not DEBUG:
     # HTTPS/SSL настройки
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 31536000  # 1 год
