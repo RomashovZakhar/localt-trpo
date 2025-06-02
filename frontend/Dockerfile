@@ -39,6 +39,12 @@ RUN npm run build
 RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D && \
     find /app/.next/static/chunks/app/documents/[id] -type f -exec cp {} /app/.next/static/chunks/app/documents/%5Bid%5D/ \; || true
 
+# После RUN npm run build
+RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ]; then \
+      mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D && \
+      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/; \
+    fi
+
 # Production-образ
 FROM node:18 AS runner
 
