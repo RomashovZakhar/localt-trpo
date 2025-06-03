@@ -16,7 +16,7 @@ interface RemoteCursor {
 
 interface CursorOverlayProps {
   cursors: RemoteCursor[];
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -28,12 +28,20 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
   // Синхронизируем размеры оверлея с контейнером редактора
   useEffect(() => {
     const resizeOverlay = () => {
-      if (!containerRef.current || !overlayRef.current) return;
+      if (!containerRef.current || !overlayRef.current) {
+        return;
+      }
       
       try {
-        const containerRect = containerRef.current.getBoundingClientRect();
-        overlayRef.current.style.width = `${containerRect.width}px`;
-        overlayRef.current.style.height = `${containerRect.height}px`;
+        const container = containerRef.current;
+        if (!container) return;
+        
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+        
+        const containerRect = container.getBoundingClientRect();
+        overlay.style.width = `${containerRect.width}px`;
+        overlay.style.height = `${containerRect.height}px`;
       } catch (error) {
         console.error('Error resizing cursor overlay:', error);
       }

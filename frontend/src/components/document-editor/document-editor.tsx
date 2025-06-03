@@ -1971,15 +1971,26 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
 
   // Инициализация WebSocket соединения при загрузке компонента
   useEffect(() => {
-    if (documentData.id) {
-      setupWs();
-    }
+    if (!documentData.id) return;
+    
+    let isComponentMounted = true;
+    
+    // Запускаем соединение с небольшой задержкой, чтобы убедиться, что DOM полностью загружен
+    const wsTimer = setTimeout(() => {
+      if (isComponentMounted) {
+        setupWs();
+      }
+    }, 500);
     
     // Очистка соединения при размонтировании компонента
     return () => {
+      isComponentMounted = false;
+      clearTimeout(wsTimer);
+      
       if (wsRef.current) {
         console.log('Закрытие WebSocket соединения при размонтировании...');
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [documentData.id, setupWs]);
