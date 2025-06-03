@@ -547,10 +547,12 @@ export default function DocumentPage() {
           </main>
         </div>
         
-        <DocumentHistorySidebar
-          documentId={id}
-          onClose={() => setShowHistorySidebar(false)}
-        />
+        {showHistorySidebar && (
+          <DocumentHistorySidebar
+            documentId={id}
+            onClose={() => setShowHistorySidebar(false)}
+          />
+        )}
       </div>
       
       <ShareDocument documentId={id} />
