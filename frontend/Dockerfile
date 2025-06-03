@@ -32,8 +32,20 @@ RUN echo "console.log('NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);"
 RUN echo "console.log('NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);" >> /app/env-check.js
 RUN node /app/env-check.js
 
+# Убедимся что у нас есть next.config.js с настройкой output: 'standalone'
+RUN if [ ! -f "next.config.js" ] && [ -f "next.config.ts" ]; then \
+      echo "/** @type {import('next').NextConfig} */ module.exports = { output: 'standalone', ...require('./next.config.ts').default };" > next.config.js; \
+    fi
+
+RUN if [ ! -f "next.config.js" ] && [ ! -f "next.config.ts" ]; then \
+      echo "/** @type {import('next').NextConfig} */ module.exports = { output: 'standalone' };" > next.config.js; \
+    fi
+
 # Сборка проекта (теперь Next.js должен увидеть правильную ENV)
 RUN npm run build
+
+# Проверяем создание standalone директории
+RUN ls -la /app/.next/ || true
 
 # Обработка динамических маршрутов: создаем директории для URL-кодированных путей и копируем файлы, если они существуют
 # Создаем директорию для URL-кодированного пути независимо от наличия исходных файлов
@@ -46,7 +58,7 @@ RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ] && [ "$(ls -A /app/.
     fi
 
 # Production-образ
-FROM node:18 AS runner
+FROM node:18-alpine AS runner
 
 WORKDIR /app
 
@@ -57,32 +69,20 @@ ARG NEXT_PUBLIC_WEBSOCKET_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
 ENV NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:8001}
 
-# Копирование необходимых файлов из стадии сборки
-COPY --from=builder /app/package.json .
-COPY --from=builder /app/package-lock.json .
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/next.config.ts .
+# Установка только необходимых пакетов
+RUN apk add --no-cache bash
 
-# Установка только production-зависимостей
-RUN npm install --only=production --legacy-peer-deps
+# Копирование необходимых файлов из стадии сборки
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
 
 # Проверяем ENV в production образе
 RUN echo "Production NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL"
 RUN echo "Production NEXT_PUBLIC_WEBSOCKET_URL: $NEXT_PUBLIC_WEBSOCKET_URL"
-RUN echo "console.log('Production NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);" > /app/env-check.js
-RUN echo "console.log('Production NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);" >> /app/env-check.js
-RUN node /app/env-check.js
 
 # Открываем порт
 EXPOSE 3000
 
 # Запуск приложения через standalone сервер
-CMD ["node", ".next/standalone/server.js"]
-
-# Обработка динамических маршрутов для производственного образа
-RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D
-RUN ls -la /app/.next/static/chunks/app/documents/ || true
-RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ] && [ "$(ls -A /app/.next/static/chunks/app/documents/[id] 2>/dev/null)" ]; then \
-      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/ 2>/dev/null || true; \
-    fi 
+CMD ["node", "server.js"] 
