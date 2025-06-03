@@ -35,14 +35,14 @@ RUN node /app/env-check.js
 # Сборка проекта (теперь Next.js должен увидеть правильную ENV)
 RUN npm run build
 
-# Создаем URL-кодированные пути для динамических маршрутов
-RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D && \
-    find /app/.next/static/chunks/app/documents/[id] -type f -exec cp {} /app/.next/static/chunks/app/documents/%5Bid%5D/ \; || true
+# Обработка динамических маршрутов: создаем директории для URL-кодированных путей и копируем файлы, если они существуют
+# Создаем директорию для URL-кодированного пути независимо от наличия исходных файлов
+RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D
 
-# После RUN npm run build
-RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ]; then \
-      mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D && \
-      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/; \
+# Безопасная проверка наличия директории и копирование файлов, если они существуют
+RUN ls -la /app/.next/static/chunks/app/documents/ || true
+RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ] && [ "$(ls -A /app/.next/static/chunks/app/documents/[id] 2>/dev/null)" ]; then \
+      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/ 2>/dev/null || true; \
     fi
 
 # Production-образ
@@ -80,6 +80,9 @@ EXPOSE 3000
 # Запуск приложения через standalone сервер
 CMD ["node", ".next/standalone/server.js"]
 
-# Убеждаемся, что URL-кодированные пути существуют и в production
-RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D && \
-    find /app/.next/static/chunks/app/documents/[id] -type f -exec cp {} /app/.next/static/chunks/app/documents/%5Bid%5D/ \; || true 
+# Обработка динамических маршрутов для производственного образа
+RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D
+RUN ls -la /app/.next/static/chunks/app/documents/ || true
+RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ] && [ "$(ls -A /app/.next/static/chunks/app/documents/[id] 2>/dev/null)" ]; then \
+      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/ 2>/dev/null || true; \
+    fi 
