@@ -819,7 +819,8 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
       cursorIdRef.current = nanoid();
     }
 
-    const token = Cookies.get('access_token') || '';
+    // Изменяем способ получения токена - используем localStorage вместо Cookies
+    const token = localStorage.getItem('accessToken') || '';
     const sessionid = window.document.cookie.split('; ').find((row: string) => row.startsWith('sessionid='))?.split('=')[1] || '';
     
     // Формируем URL для WebSocket соединения
