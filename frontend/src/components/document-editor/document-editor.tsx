@@ -839,138 +839,143 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
       return;
     }
     
-    // Создаем новое WebSocket соединение
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-    
-    ws.onopen = () => {
-      console.log('WebSocket соединение установлено');
-      setWsConnectionStatus('connected');
+    try {
+      // Создаем новое WebSocket соединение
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
       
-      // Отправляем информацию о подключении курсора
-      if (ws.readyState === WebSocket.OPEN && user) {
+      ws.onopen = () => {
+        console.log('WebSocket соединение установлено');
+        setWsConnectionStatus('connected');
+        
+        // Отправляем информацию о подключении курсора
+        if (ws.readyState === WebSocket.OPEN && user) {
+          try {
+            ws.send(JSON.stringify({
+              type: 'cursor_connect',
+              cursor_id: cursorIdRef.current,
+              username: user?.username || user?.first_name || 'Пользователь',
+              user_id: user?.id || 'anonymous'
+            }));
+          } catch (err) {
+            console.error('Ошибка при отправке данных о курсоре:', err);
+          }
+        }
+      };
+      
+      ws.onmessage = (event) => {
         try {
-          ws.send(JSON.stringify({
-            type: 'cursor_connect',
-            cursor_id: cursorIdRef.current,
-            username: user?.username || user?.first_name || 'Пользователь',
-            user_id: user?.id || 'anonymous'
-          }));
-        } catch (err) {
-          console.error('Ошибка при отправке данных о курсоре:', err);
-        }
-      }
-    };
-    
-    ws.onmessage = (event) => {
-      try {
-        // Логируем все входящие сообщения
-        console.log('🔍 Получено WebSocket сообщение:', event.data);
-        
-        // Анализируем полученное сообщение
-        const message = JSON.parse(event.data);
-        const messageType = message.type;
-        
-        console.log('📋 Тип сообщения:', messageType, message);
-        
-        // Обрабатываем разные типы сообщений
-        if (messageType === 'document_update') {
-          console.log('📄 Обновление документа получено');
+          // Логируем все входящие сообщения
+          console.log('🔍 Получено WebSocket сообщение:', event.data);
           
-          // Если это наше собственное обновление, игнорируем его
-          if (message.sender_id === cursorIdRef.current) {
-            console.log('🔄 Игнорируем собственное обновление');
-            return;
+          // Анализируем полученное сообщение
+          const message = JSON.parse(event.data);
+          const messageType = message.type;
+          
+          console.log('📋 Тип сообщения:', messageType, message);
+          
+          // Обрабатываем разные типы сообщений
+          if (messageType === 'document_update') {
+            console.log('📄 Обновление документа получено');
+            
+            // Если это наше собственное обновление, игнорируем его
+            if (message.sender_id === cursorIdRef.current) {
+              console.log('🔄 Игнорируем собственное обновление');
+              return;
+            }
+            
+            // Обновляем содержимое редактора из внешнего источника
+            setContentFromExternal(message.content);
+          } 
+          else if (messageType === 'cursor_update') {
+            console.log('👆 Обновление позиции курсора получено:', {
+              cursor_id: message.cursor_id,
+              is_my_cursor: message.cursor_id === cursorIdRef.current,
+              username: message.username,
+              position: message.position
+            });
+            
+            // Если у нас есть информация о позиции курсора и это не наш курсор
+            if (message.cursor_id && message.cursor_id !== cursorIdRef.current) {
+              console.log('🎯 Обновляем позицию удаленного курсора:', message.username);
+              // Обновляем информацию о курсорах других пользователей
+              updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
+            } else {
+              console.log('⏩ Пропускаем обновление собственного курсора');
+            }
           }
-          
-          // Обновляем содержимое редактора из внешнего источника
-          setContentFromExternal(message.content);
-        } 
-        else if (messageType === 'cursor_update') {
-          console.log('👆 Обновление позиции курсора получено:', {
-            cursor_id: message.cursor_id,
-            is_my_cursor: message.cursor_id === cursorIdRef.current,
-            username: message.username,
-            position: message.position
-          });
-          
-          // Если у нас есть информация о позиции курсора и это не наш курсор
-          if (message.cursor_id && message.cursor_id !== cursorIdRef.current) {
-            console.log('🎯 Обновляем позицию удаленного курсора:', message.username);
-            // Обновляем информацию о курсорах других пользователей
-            updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
-          } else {
-            console.log('⏩ Пропускаем обновление собственного курсора');
+          // Добавляем обработку cursor_position_update - используется сервером
+          else if (messageType === 'cursor_position_update') {
+            console.log('👆 Обновление позиции курсора получено (position_update):', {
+              cursor_id: message.cursor_id,
+              is_my_cursor: message.cursor_id === cursorIdRef.current,
+              username: message.username,
+              position: message.position
+            });
+            
+            // Если у нас есть информация о позиции курсора и это не наш курсор
+            if (message.cursor_id && message.cursor_id !== cursorIdRef.current) {
+              console.log('🎯 Обновляем позицию удаленного курсора:', message.username);
+              // Обновляем информацию о курсорах других пользователей
+              updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
+            } else {
+              console.log('⏩ Пропускаем обновление собственного курсора');
+            }
           }
-        }
-        // Добавляем обработку cursor_position_update - используется сервером
-        else if (messageType === 'cursor_position_update') {
-          console.log('👆 Обновление позиции курсора получено (position_update):', {
-            cursor_id: message.cursor_id,
-            is_my_cursor: message.cursor_id === cursorIdRef.current,
-            username: message.username,
-            position: message.position
-          });
-          
-          // Если у нас есть информация о позиции курсора и это не наш курсор
-          if (message.cursor_id && message.cursor_id !== cursorIdRef.current) {
-            console.log('🎯 Обновляем позицию удаленного курсора:', message.username);
-            // Обновляем информацию о курсорах других пользователей
-            updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
-          } else {
-            console.log('⏩ Пропускаем обновление собственного курсора');
+          // Обработка сообщения о подключении курсора
+          else if (messageType === 'cursor_connected') {
+            console.log('🟢 Курсор пользователя подключен:', message.username);
+            // Можно добавить анимацию или уведомление о новом пользователе
           }
-        }
-        // Обработка сообщения о подключении курсора
-        else if (messageType === 'cursor_connected') {
-          console.log('🟢 Курсор пользователя подключен:', message.username);
-          // Можно добавить анимацию или уведомление о новом пользователе
-        }
-        // Обработка сообщения об отключении курсора
-        else if (messageType === 'cursor_disconnected') {
-          console.log('🔴 Курсор пользователя отключен:', message.username);
-          
-          // Удаляем курсор из DOM
-          removeRemoteCursor(message.cursor_id);
-        }
-        // Обработка сообщения об активном курсоре
-        else if (messageType === 'cursor_active') {
-          console.log('🔵 Получена информация о активном курсоре:', message.username);
-          
-          // Если у нас есть информация о курсоре и его позиции, отображаем его
-          if (message.cursor_id && message.position) {
-            updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
+          // Обработка сообщения об отключении курсора
+          else if (messageType === 'cursor_disconnected') {
+            console.log('🔴 Курсор пользователя отключен:', message.username);
+            
+            // Удаляем курсор из DOM
+            removeRemoteCursor(message.cursor_id);
           }
+          // Обработка сообщения об активном курсоре
+          else if (messageType === 'cursor_active') {
+            console.log('🔵 Получена информация о активном курсоре:', message.username);
+            
+            // Если у нас есть информация о курсоре и его позиции, отображаем его
+            if (message.cursor_id && message.position) {
+              updateRemoteCursor(message.cursor_id, message.position, message.username, message.user_id);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Ошибка при обработке сообщения WebSocket:', error);
         }
-      } catch (error) {
-        console.error('❌ Ошибка при обработке сообщения WebSocket:', error);
-      }
-    };
+      };
 
-    ws.onclose = (event) => {
-      console.log(`WebSocket соединение закрыто: ${event.code}`);
-      setWsConnectionStatus('disconnected');
-      
-      // Удаляем все курсоры при отключении
-      const allCursors = window.document.querySelectorAll('.remote-cursor');
-      allCursors.forEach(cursor => {
-        cursor.remove();
-        console.log('Удален курсор при закрытии соединения');
-      });
-      
-      // Повторное подключение через 1 секунду, если соединение было закрыто неожиданно
-      if (event.code !== 1000) {
-        console.log('Повторное подключение через 1 секунду...');
-        setTimeout(() => {
-          setupWs();
-        }, 1000);
-      }
-    };
+      ws.onclose = (event) => {
+        console.log(`WebSocket соединение закрыто: ${event.code}`);
+        setWsConnectionStatus('disconnected');
+        
+        // Удаляем все курсоры при отключении
+        const allCursors = window.document.querySelectorAll('.remote-cursor');
+        allCursors.forEach(cursor => {
+          cursor.remove();
+          console.log('Удален курсор при закрытии соединения');
+        });
+        
+        // Повторное подключение через 1 секунду, если соединение было закрыто неожиданно
+        if (event.code !== 1000) {
+          console.log('Повторное подключение через 1 секунду...');
+          setTimeout(() => {
+            setupWs();
+          }, 1000);
+        }
+      };
 
-    ws.onerror = (error) => {
-      console.error('Ошибка WebSocket:', error);
+      ws.onerror = (error) => {
+        console.error('Ошибка WebSocket:', error);
+        setWsConnectionStatus('error');
+      };
+    } catch (error) {
+      console.error('Ошибка при установке WebSocket соединения:', error);
       setWsConnectionStatus('error');
-    };
+    }
   }, [documentData.id, user]);
 
   // Отправка позиции курсора
@@ -984,6 +989,18 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     try {
       // Сохраняем текущую позицию
       cursorPositionRef.current = position;
+      
+      // Если нет позиции или DOM-элемента редактора, отправляем null
+      if (!position || !editorRef.current) {
+        wsRef.current.send(JSON.stringify({
+          type: 'cursor_position',
+          cursor_id: cursorIdRef.current,
+          user_id: user?.id || '',
+          username: user?.username || '',
+          position: null,
+        }));
+        return;
+      }
       
       // Безопасно получаем данные пользователя
       const userId = user?.id || 'anonymous';
@@ -1970,56 +1987,19 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
   // Функция для логирования данных редактора
   const logEditorData = async () => {
     try {
-      if (!editorInstanceRef.current) {
-        console.error("Редактор не определен");
+      if (!editorInstanceRef.current || typeof editorInstanceRef.current.save !== 'function') {
+        console.log('Редактор не инициализирован или не имеет метода save');
         return;
       }
       
-      // Получаем данные из редактора
       const outputData = await editorInstanceRef.current.save();
-      
-      // Логируем структуру данных для диагностики
-      console.log("Выходные данные редактора:", outputData);
-      
-      if (outputData && outputData.blocks) {
-        // Подсчет всех типов блоков
-        const blockTypes: Record<string, number> = {};
-        outputData.blocks.forEach((block: any) => {
-          const blockType = block.type as string;
-          if (!blockTypes[blockType]) {
-            blockTypes[blockType] = 0;
-          }
-          blockTypes[blockType]++;
-          
-          // Выводим данные о каждом блоке
-          console.log(`Блок типа ${blockType}:`, block);
-        });
-        
-        console.log("Типы блоков в документе:", blockTypes);
-        
-        // Проверяем list блоки, которые могут быть чеклистами
-        const lists = outputData.blocks.filter(
-          (block: any) => block.type === 'list'
-        );
-        console.log("Найденные списки:", lists);
-        
-        const checklists = outputData.blocks.filter(
-          (block: any) => block.type === 'checklist'
-        );
-        console.log("Найденные чеклисты:", checklists);
-      }
-    } catch (error) {
-      console.error("Ошибка получения данных редактора:", error);
+      console.log('Текущие данные редактора:', outputData);
+      return outputData;
+    } catch (err) {
+      console.error('Ошибка при получении данных редактора:', err);
+      return null;
     }
   };
-
-  // Запускаем логирование данных после инициализации редактора
-  setTimeout(() => {
-    if (editorInstanceRef.current) {
-      console.log("Запуск диагностики данных редактора...");
-      logEditorData();
-    }
-  }, 5000);
 
   // Обновляем высоту textarea при изменении заголовка
   useEffect(() => {
@@ -2190,65 +2170,67 @@ export function DocumentEditor({ document, onChange, titleInputRef }: DocumentEd
     
     // Выносим логику обновления редактора в отдельную функцию
     const updateEditorReadOnlyState = (newReadOnly: boolean) => {
-      // Если редактор существует
-      if (editorInstanceRef.current) {
-        console.log(`Обновляем состояние редактора, режим только для чтения: ${newReadOnly}`);
+      if (!editorRef.current || !editorInstanceRef.current) {
+        console.log("DOM элемент для редактора или экземпляр редактора не найден");
+        return;
+      }
+
+      try {
+        console.log(`Принудительно устанавливаем режим только для чтения: ${newReadOnly ? 'ДА' : 'НЕТ'}`);
         
-        // Устанавливаем свойство readOnly у редактора
-        try {
-          // Проверяем, соответствует ли текущее состояние редактора требуемому
-          const currentReadOnly = editorInstanceRef.current.readOnly?.isEnabled || false;
-          
-          if (currentReadOnly !== newReadOnly) {
-            console.log(`Меняем состояние readOnly с ${currentReadOnly} на ${newReadOnly}`);
-            editorInstanceRef.current.readOnly.toggle(newReadOnly);
-            console.log("Режим readOnly обновлен в редакторе");
-          } else {
-            console.log(`Состояние readOnly уже установлено в ${newReadOnly}, пропускаем обновление`);
-          }
-        } catch (err) {
-          console.error("Ошибка при обновлении режима readOnly:", err);
+        // Применяем визуальные стили
+        if (newReadOnly) {
+          editorRef.current.classList.add('editor-readonly');
+        } else {
+          editorRef.current.classList.remove('editor-readonly');
         }
         
-        // Принудительно обновляем DOM
-        if (editorRef.current) {
-          // Добавляем класс для стилизации режима только для чтения
-          editorRef.current.classList.toggle('editor-readonly', newReadOnly);
-          
-          // Обрабатываем уведомление о режиме только для чтения
-          const existingNotice = editorRef.current.querySelector('.readonly-notice');
-          if (newReadOnly) {
-            // Если нужен режим только для чтения и уведомление отсутствует, добавляем его
-            if (!existingNotice) {
-              const readOnlyNotice = window.document.createElement('div');
-              readOnlyNotice.className = 'readonly-notice';
-              readOnlyNotice.textContent = 'У вас нет прав на редактирование этого документа';
-              editorRef.current.prepend(readOnlyNotice);
+        // Перезагружаем редактор только если нужно переключить режим
+        if (editorInstanceRef.current.readOnly !== newReadOnly) {
+          // Используем setTimeout, чтобы дать другим эффектам выполниться
+          setTimeout(async () => {
+            try {
+              // Разрушаем редактор и создаем новый
+              if (editorInstanceRef.current) {
+                const savedData = await logEditorData();
+                
+                await editorInstanceRef.current.destroy();
+                editorInstanceRef.current = null;
+                
+                console.log("Редактор уничтожен, создаем новый");
+                
+                // Создаем новый редактор с обновленным состоянием readOnly
+                if (editorRef.current) {
+                  // Используем тип any, так как тип EditorJS недоступен во время выполнения
+                  const EditorJS = (await import('@editorjs/editorjs')).default;
+                  
+                  editorInstanceRef.current = new EditorJS({
+                    holder: editorRef.current,
+                    readOnly: newReadOnly,
+                    data: savedData,
+                    tools: getEditorTools(),
+                    onReady: () => {
+                      console.log(`Редактор пересоздан в режиме только для чтения: ${newReadOnly ? 'ДА' : 'НЕТ'}`);
+                      
+                      // Применяем принудительное отключение contentEditable для всех элементов
+                      if (newReadOnly && editorRef.current) {
+                        const editableElements = editorRef.current.querySelectorAll('[contenteditable="true"]');
+                        console.log('Найдено редактируемых элементов:', editableElements.length);
+                        editableElements.forEach(el => {
+                          (el as HTMLElement).setAttribute('contenteditable', 'false');
+                        });
+                      }
+                    }
+                  });
+                }
+              }
+            } catch (err) {
+              console.error("Ошибка при пересоздании редактора:", err);
             }
-            
-            // Отключаем все редактируемые элементы
-            const editableElements = editorRef.current.querySelectorAll('[contenteditable="true"]');
-            if (editableElements.length > 0) {
-              console.log('Отключаем редактируемые элементы, количество:', editableElements.length);
-              editableElements.forEach(el => {
-                (el as HTMLElement).setAttribute('contenteditable', 'false');
-              });
-            }
-          } else {
-            // Если режим редактирования, удаляем уведомление
-            if (existingNotice) {
-              existingNotice.remove();
-            }
-            
-            // Включаем редактирование для элементов
-            if (!editorInstanceRef.current.readOnly) {
-              const editableBlocks = editorRef.current.querySelectorAll('.ce-block__content');
-              editableBlocks.forEach(el => {
-                (el as HTMLElement).setAttribute('contenteditable', 'true');
-              });
-            }
-          }
+          }, 100);
         }
+      } catch (err) {
+        console.error("Ошибка при обновлении режима только для чтения:", err);
       }
     };
     

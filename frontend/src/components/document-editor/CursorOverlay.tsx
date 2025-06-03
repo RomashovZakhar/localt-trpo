@@ -30,9 +30,13 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) 
     const resizeOverlay = () => {
       if (!containerRef.current || !overlayRef.current) return;
       
-      const containerRect = containerRef.current.getBoundingClientRect();
-      overlayRef.current.style.width = `${containerRect.width}px`;
-      overlayRef.current.style.height = `${containerRect.height}px`;
+      try {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        overlayRef.current.style.width = `${containerRect.width}px`;
+        overlayRef.current.style.height = `${containerRect.height}px`;
+      } catch (error) {
+        console.error('Error resizing cursor overlay:', error);
+      }
     };
 
     // Начальная синхронизация

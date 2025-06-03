@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { X, ClockIcon, UserIcon, Edit, Eye, Share, Trash, Settings } from "lucide-react";
@@ -35,22 +35,34 @@ export function DocumentHistorySidebar({ documentId, onClose }: DocumentHistoryS
   const [history, setHistory] = useState<DocumentHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMounted = useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
     const fetchHistory = async () => {
       try {
         setLoading(true);
         const response = await api.get(`/documents/${documentId}/history/`);
-        setHistory(response.data);
+        if (isMounted.current) {
+          setHistory(response.data);
+        }
       } catch (err) {
         console.error("Ошибка при загрузке истории:", err);
-        setError("Не удалось загрузить историю изменений");
+        if (isMounted.current) {
+          setError("Не удалось загрузить историю изменений");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
 
     fetchHistory();
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [documentId]);
 
   // Функция для отображения иконки действия
