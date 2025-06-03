@@ -10,52 +10,24 @@ ENV NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:8001}
 # Установка рабочей директории
 WORKDIR /app
 
-# Копирование package.json и lock-файла
-COPY package.json package-lock.json ./
+# Копирование package.json и установка зависимостей
+COPY package*.json ./
+RUN npm ci --legacy-peer-deps
 
-# Удаляем node_modules и lock-файл на всякий случай
-RUN rm -rf node_modules package-lock.json
-
-# Установка зависимостей
-COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps
-
-# Копирование исходного кода
+# Копирование исходного кода и конфигурационных файлов
 COPY . .
 
 # Выводим значения ENV для проверки на этапе сборки
 RUN echo "Build-time NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL"
 RUN echo "Build-time NEXT_PUBLIC_WEBSOCKET_URL: $NEXT_PUBLIC_WEBSOCKET_URL"
+RUN ls -la *.mjs || true
+RUN cat next.config.mjs
 
-# Создаем файл для проверки переменных окружения
-RUN echo "console.log('NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);" > /app/env-check.js
-RUN echo "console.log('NEXT_PUBLIC_WEBSOCKET_URL:', process.env.NEXT_PUBLIC_WEBSOCKET_URL);" >> /app/env-check.js
-RUN node /app/env-check.js
-
-# Убедимся что у нас есть next.config.js с настройкой output: 'standalone'
-RUN if [ ! -f "next.config.js" ] && [ -f "next.config.ts" ]; then \
-      echo "/** @type {import('next').NextConfig} */ module.exports = { output: 'standalone', ...require('./next.config.ts').default };" > next.config.js; \
-    fi
-
-RUN if [ ! -f "next.config.js" ] && [ ! -f "next.config.ts" ]; then \
-      echo "/** @type {import('next').NextConfig} */ module.exports = { output: 'standalone' };" > next.config.js; \
-    fi
-
-# Сборка проекта (теперь Next.js должен увидеть правильную ENV)
+# Сборка проекта
 RUN npm run build
 
 # Проверяем создание standalone директории
-RUN ls -la /app/.next/ || true
-
-# Обработка динамических маршрутов: создаем директории для URL-кодированных путей и копируем файлы, если они существуют
-# Создаем директорию для URL-кодированного пути независимо от наличия исходных файлов
-RUN mkdir -p /app/.next/static/chunks/app/documents/%5Bid%5D
-
-# Безопасная проверка наличия директории и копирование файлов, если они существуют
-RUN ls -la /app/.next/static/chunks/app/documents/ || true
-RUN if [ -d "/app/.next/static/chunks/app/documents/[id]" ] && [ "$(ls -A /app/.next/static/chunks/app/documents/[id] 2>/dev/null)" ]; then \
-      cp -r /app/.next/static/chunks/app/documents/[id]/* /app/.next/static/chunks/app/documents/%5Bid%5D/ 2>/dev/null || true; \
-    fi
+RUN ls -la /app/.next/
 
 # Production-образ
 FROM node:18-alpine AS runner
@@ -68,9 +40,6 @@ ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_WEBSOCKET_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
 ENV NEXT_PUBLIC_WEBSOCKET_URL=${NEXT_PUBLIC_WEBSOCKET_URL:-ws://localhost:8001}
-
-# Установка только необходимых пакетов
-RUN apk add --no-cache bash
 
 # Копирование необходимых файлов из стадии сборки
 COPY --from=builder /app/public ./public
